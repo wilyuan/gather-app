@@ -1791,7 +1791,10 @@ function getFilteredActivities() {
 }
 
 function getCategoryInfo(catId) {
-  return state.categories.find(c => c.id === catId) || { icon: '📍', color: '#6366f1', name: 'Other' };
+  // Match by id first, then by slug/name for demo data compatibility
+  return state.categories.find(c => c.id === catId) ||
+    DEMO_CATEGORIES.find(c => c.id === catId) ||
+    { icon: '📍', color: '#6366f1', name: 'Other' };
 }
 
 function renderMarkers(activities) {
