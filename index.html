@@ -274,6 +274,65 @@ html, body {
 .marker-lang-badge.pl { color: var(--lang-pl); }
 .marker-lang-badge.en-pl { color: var(--lang-enpl); }
 
+/* Timing pulse on markers */
+.activity-marker.happening-now { border-color: var(--success); }
+.activity-marker.happening-now::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--success);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+.activity-marker.happening-soon { border-color: #f97316; }
+.activity-marker.happening-soon::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid #f97316;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* Timing badges on list cards */
+.timing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.timing-badge.now { background: #dcfce7; color: #16a34a; }
+.timing-badge.soon { background: #fff7ed; color: #ea580c; }
+.timing-badge.few-spots { background: #fef2f2; color: #dc2626; }
+
+/* Join confirmation */
+.join-confirm {
+  text-align: center;
+  padding: 24px 0;
+}
+.join-confirm .check-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 16px;
+}
+.join-confirm h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.join-confirm p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
 /* ============================================
    BOTTOM NAV
    ============================================ */
@@ -604,55 +663,8 @@ html, body {
 .lang-tag.en-pl { background: var(--lang-enpl); }
 
 /* ============================================
-   AUTH SCREENS
+   AUTH (slide-up panel)
    ============================================ */
-#auth-screen {
-  position: fixed;
-  inset: 0;
-  background: var(--card);
-  z-index: 5000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-}
-
-#auth-screen .auth-logo {
-  font-size: 42px;
-  font-weight: 900;
-  color: var(--primary);
-  margin-bottom: 8px;
-}
-#auth-screen .auth-tagline {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin-bottom: 32px;
-}
-#auth-screen .auth-box {
-  width: 100%;
-  max-width: 360px;
-}
-#auth-screen .auth-toggle {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-#auth-screen .auth-toggle a {
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-}
-#auth-screen .auth-skip {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
 .auth-error {
   background: #fef2f2;
   color: var(--danger);
@@ -660,6 +672,26 @@ html, body {
   border-radius: var(--radius-sm);
   font-size: 13px;
   margin-bottom: 12px;
+}
+
+.social-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.social-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.google-btn { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.google-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+.auth-toggle {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 /* ============================================
@@ -788,6 +820,32 @@ html, body {
   z-index: 999;
 }
 
+/* Language toggle in profile */
+.lang-toggle {
+  display: flex;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+.lang-toggle-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-muted);
+}
+.lang-toggle-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.3);
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */
@@ -803,36 +861,7 @@ html, body {
 </head>
 <body>
 
-<!-- ============================================
-     AUTH SCREEN
-     ============================================ -->
-<div id="auth-screen" class="hidden">
-  <div class="auth-logo">Gather</div>
-  <div class="auth-tagline">Discover real-world activities nearby</div>
-  <div class="auth-box">
-    <div id="auth-error" class="auth-error hidden"></div>
-    <div class="form-group">
-      <label id="auth-name-label" for="auth-name">Display Name</label>
-      <input type="text" id="auth-name" placeholder="Your name">
-    </div>
-    <div class="form-group">
-      <label for="auth-email">Email</label>
-      <input type="email" id="auth-email" placeholder="you@example.com">
-    </div>
-    <div class="form-group">
-      <label for="auth-password">Password</label>
-      <input type="password" id="auth-password" placeholder="Min 6 characters">
-    </div>
-    <button id="auth-submit" class="btn btn-primary btn-full" onclick="handleAuth()">
-      Sign Up
-    </button>
-    <div class="auth-toggle">
-      <span id="auth-toggle-text">Already have an account? </span>
-      <a id="auth-toggle-link" onclick="toggleAuthMode()">Log In</a>
-    </div>
-    <div class="auth-skip" onclick="skipAuth()">Browse without an account</div>
-  </div>
-</div>
+<!-- Auth screen removed — replaced by auth-panel slide-up -->
 
 <!-- ============================================
      MAIN APP
@@ -979,7 +1008,7 @@ html, body {
 <div id="city-panel" class="slide-panel">
   <div class="panel-handle"></div>
   <div class="panel-header">
-    <h2>Choose City</h2>
+    <h2 id="city-panel-title">Choose City</h2>
     <button class="panel-close" onclick="closeAllPanels()">&times;</button>
   </div>
   <div class="panel-body" id="city-list"></div>
@@ -989,7 +1018,7 @@ html, body {
 <div id="filter-panel" class="slide-panel">
   <div class="panel-handle"></div>
   <div class="panel-header">
-    <h2>Filters</h2>
+    <h2 id="filter-panel-title">Filters</h2>
     <button class="panel-close" onclick="closeAllPanels()">&times;</button>
   </div>
   <div class="panel-body">
@@ -1010,6 +1039,10 @@ html, body {
         <div class="filter-chip" data-time="week" onclick="setTimeFilter('week')">This week</div>
         <div class="filter-chip" data-time="weekend" onclick="setTimeFilter('weekend')">Weekend</div>
       </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Or pick a specific date:</label>
+        <input type="date" id="filter-date" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;" onchange="setDateFilter(this.value)">
+      </div>
     </div>
     <div class="filter-section">
       <h3>Type</h3>
@@ -1028,6 +1061,55 @@ html, body {
 <div id="profile-panel" class="slide-panel">
   <div class="panel-handle"></div>
   <div id="profile-content"></div>
+</div>
+
+<!-- Auth Panel (slide-up, not full-page) -->
+<div id="auth-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <h2 id="auth-panel-title">Join the fun</h2>
+    <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+  </div>
+  <div class="panel-body">
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px;" id="auth-panel-subtitle">Sign in to join activities, save events, and host your own.</p>
+
+    <!-- Social login buttons -->
+    <button class="btn btn-full social-btn google-btn" onclick="socialLogin('google')" style="background:#fff;color:#333;border:1px solid var(--border);margin-bottom:10px;font-size:14px;">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+    <button class="btn btn-full social-btn apple-btn" onclick="socialLogin('apple')" style="background:#000;color:#fff;margin-bottom:10px;font-size:14px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+      Continue with Apple
+    </button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:18px 0;">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:12px;color:var(--text-muted);font-weight:600">or use email</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <div id="auth-error" class="auth-error hidden"></div>
+    <div class="form-group" id="auth-name-group">
+      <label id="auth-name-label" for="auth-name">Display Name</label>
+      <input type="text" id="auth-name" placeholder="Your name">
+    </div>
+    <div class="form-group">
+      <label for="auth-email">Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label for="auth-password">Password</label>
+      <input type="password" id="auth-password" placeholder="Min 6 characters">
+    </div>
+    <button id="auth-submit" class="btn btn-primary btn-full" onclick="handleAuth()">
+      Sign Up
+    </button>
+    <div class="auth-toggle" style="margin-top:14px;">
+      <span id="auth-toggle-text">Already have an account? </span>
+      <a id="auth-toggle-link" onclick="toggleAuthMode()" style="color:var(--primary);font-weight:600;cursor:pointer">Log In</a>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -1064,13 +1146,240 @@ const state = {
   categories: [],
   activities: [],
   markers: [],
-  filters: { category: null, lang: 'all', time: 'all', type: 'all', search: '' },
+  filters: { category: null, lang: 'all', time: 'all', type: 'all', date: null, search: '' },
   currentView: 'map',
   authMode: 'signup', // 'signup' or 'login'
   demoMode: !sb,
+  appLang: localStorage.getItem('gather-lang') || 'en',
   map: null,
   markerLayer: null
 };
+
+// ============================================
+// i18n — TRANSLATIONS
+// ============================================
+const TRANSLATIONS = {
+  en: {
+    // Header & Nav
+    map: 'Map', list: 'List', saved: 'Saved', profile: 'Profile',
+    searchPlaceholder: 'Search activities...',
+    // Filters
+    filters: 'Filters', language: 'Language', when: 'When', type: 'Type',
+    all: 'All', english: 'English', polish: 'Polish', both: 'Both',
+    anyTime: 'Any time', today: 'Today', thisWeek: 'This week', weekend: 'Weekend',
+    pickDate: 'Or pick a specific date:', freeOnly: 'Free only', recurring: 'Recurring',
+    applyFilters: 'Apply Filters',
+    // Detail
+    participants: 'participants', full: 'Full', joinWaitlist: 'Full — Join Waitlist',
+    joinActivity: 'Join Activity', addToCalendar: 'Add to Calendar',
+    host: 'Host', via: 'via', oneTime: 'One-time', everyWeek: 'Every week',
+    every2Weeks: 'Every 2 weeks', monthly: 'Monthly', daily: 'Daily',
+    free: 'Free', spotsLeft: 'spots left', spotLeft: 'spot left',
+    liveNow: 'LIVE NOW', within24h: 'Within 24h',
+    // Auth
+    joinTheFun: 'Join the fun',
+    authSubtitle: 'Sign in to join activities, save events, and host your own.',
+    continueGoogle: 'Continue with Google', continueApple: 'Continue with Apple',
+    orUseEmail: 'or use email', displayName: 'Display Name',
+    email: 'Email', password: 'Password',
+    signUp: 'Sign Up', logIn: 'Log In',
+    alreadyHaveAccount: 'Already have an account? ',
+    dontHaveAccount: "Don't have an account? ",
+    enterEmailPass: 'Please enter email and password.',
+    enterName: 'Please enter your display name.',
+    welcomeGather: 'Welcome to Gather!', welcomeBack: 'Welcome back!',
+    // Profile
+    browsingAsGuest: "You're browsing as a guest",
+    signUpToHost: 'Sign up to host and join activities',
+    signUpLogIn: 'Sign Up / Log In',
+    editProfile: 'Edit Profile', myActivities: 'My Activities',
+    upgradePremium: 'Upgrade to Premium', logOut: 'Log Out',
+    appLanguage: 'App Language',
+    // Create
+    hostActivity: 'Host an Activity', activityTitle: 'Activity Title',
+    description: 'Description', category: 'Category',
+    activityLang: 'Language', locationName: 'Location Name',
+    address: 'Address', date: 'Date', time: 'Time',
+    frequency: 'Frequency', maxPeople: 'Max People',
+    oneTimeFree: 'One-time (Free)', weeklyPremium: 'Weekly ⭐ Premium',
+    biweeklyPremium: 'Biweekly ⭐ Premium', monthlyPremium: 'Monthly ⭐ Premium',
+    freqHint: 'One-time events are always free. Recurring events require a Premium subscription.',
+    createActivity: 'Create Activity',
+    // City
+    chooseCity: 'Choose City',
+    capitalCity: 'Capital city · 1.8M population',
+    culturalCapital: 'Cultural capital · 800K population',
+    // Empty states & toasts
+    noActivities: 'No activities found',
+    tryChangingFilters: 'Try changing your filters or search',
+    noSaved: 'No saved activities yet',
+    tapBookmark: 'Tap the bookmark icon on any activity to save it',
+    youJoined: 'You joined! See you there',
+    alreadyJoined: 'You already joined this activity',
+    activitySaved: 'Activity saved!',
+    activityCreated: 'Activity created!',
+    switchedTo: 'Switched to',
+    fillRequired: 'Please fill in all required fields',
+    premiumRequired: 'Premium required for recurring events',
+    guestTip: 'Browsing as guest — sign up to host activities!',
+    calendarDownloaded: 'Calendar event downloaded!',
+    googleCalendar: 'Google Calendar',
+    appleCalendar: 'Apple Calendar / iCal',
+    cancel: 'Cancel',
+    signInToJoin: 'Sign in to join this activity and get reminders.',
+    signInToHost: 'Sign in to host your own activities and build a community.',
+    signInToCalendar: 'Sign in to add events to your calendar.',
+    joinConfirmTitle: "You're going!",
+    joinConfirmText: 'Add this to your calendar so you don\'t forget.',
+    done: 'Done',
+    installTip: 'Tip: Add Gather to your home screen for the best experience!',
+    comingSoon: 'coming soon!',
+  },
+  pl: {
+    map: 'Mapa', list: 'Lista', saved: 'Zapisane', profile: 'Profil',
+    searchPlaceholder: 'Szukaj aktywności...',
+    filters: 'Filtry', language: 'Język', when: 'Kiedy', type: 'Typ',
+    all: 'Wszystkie', english: 'Angielski', polish: 'Polski', both: 'Oba',
+    anyTime: 'Kiedykolwiek', today: 'Dziś', thisWeek: 'Ten tydzień', weekend: 'Weekend',
+    pickDate: 'Lub wybierz konkretną datę:', freeOnly: 'Tylko darmowe', recurring: 'Cykliczne',
+    applyFilters: 'Zastosuj filtry',
+    participants: 'uczestników', full: 'Pełne', joinWaitlist: 'Pełne — Lista oczekujących',
+    joinActivity: 'Dołącz', addToCalendar: 'Dodaj do kalendarza',
+    host: 'Organizator', via: 'przez', oneTime: 'Jednorazowe', everyWeek: 'Co tydzień',
+    every2Weeks: 'Co 2 tygodnie', monthly: 'Co miesiąc', daily: 'Codziennie',
+    free: 'Za darmo', spotsLeft: 'miejsc wolnych', spotLeft: 'miejsce wolne',
+    liveNow: 'TERAZ', within24h: 'W ciągu 24h',
+    joinTheFun: 'Dołącz do zabawy',
+    authSubtitle: 'Zaloguj się, aby dołączać do aktywności, zapisywać wydarzenia i organizować własne.',
+    continueGoogle: 'Kontynuuj z Google', continueApple: 'Kontynuuj z Apple',
+    orUseEmail: 'lub użyj e-maila', displayName: 'Nazwa wyświetlana',
+    email: 'E-mail', password: 'Hasło',
+    signUp: 'Zarejestruj się', logIn: 'Zaloguj się',
+    alreadyHaveAccount: 'Masz już konto? ',
+    dontHaveAccount: 'Nie masz konta? ',
+    enterEmailPass: 'Podaj e-mail i hasło.',
+    enterName: 'Podaj swoją nazwę.',
+    welcomeGather: 'Witaj w Gather!', welcomeBack: 'Witaj z powrotem!',
+    browsingAsGuest: 'Przeglądasz jako gość',
+    signUpToHost: 'Zarejestruj się, aby organizować i dołączać do aktywności',
+    signUpLogIn: 'Rejestracja / Logowanie',
+    editProfile: 'Edytuj profil', myActivities: 'Moje aktywności',
+    upgradePremium: 'Ulepsz do Premium', logOut: 'Wyloguj się',
+    appLanguage: 'Język aplikacji',
+    hostActivity: 'Organizuj aktywność', activityTitle: 'Tytuł aktywności',
+    description: 'Opis', category: 'Kategoria',
+    activityLang: 'Język', locationName: 'Nazwa miejsca',
+    address: 'Adres', date: 'Data', time: 'Godzina',
+    frequency: 'Częstotliwość', maxPeople: 'Maks. osób',
+    oneTimeFree: 'Jednorazowe (Za darmo)', weeklyPremium: 'Tygodniowo ⭐ Premium',
+    biweeklyPremium: 'Co 2 tyg. ⭐ Premium', monthlyPremium: 'Miesięcznie ⭐ Premium',
+    freqHint: 'Jednorazowe wydarzenia są zawsze darmowe. Cykliczne wymagają subskrypcji Premium.',
+    createActivity: 'Utwórz aktywność',
+    chooseCity: 'Wybierz miasto',
+    capitalCity: 'Stolica · 1,8M mieszkańców',
+    culturalCapital: 'Stolica kultury · 800 tys. mieszkańców',
+    noActivities: 'Nie znaleziono aktywności',
+    tryChangingFilters: 'Spróbuj zmienić filtry lub wyszukiwanie',
+    noSaved: 'Brak zapisanych aktywności',
+    tapBookmark: 'Stuknij ikonę zakładki przy aktywności, aby ją zapisać',
+    youJoined: 'Dołączyłeś! Do zobaczenia',
+    alreadyJoined: 'Już dołączyłeś do tej aktywności',
+    activitySaved: 'Aktywność zapisana!',
+    activityCreated: 'Aktywność utworzona!',
+    switchedTo: 'Przełączono na',
+    fillRequired: 'Wypełnij wszystkie wymagane pola',
+    premiumRequired: 'Premium wymagany dla cyklicznych wydarzeń',
+    guestTip: 'Przeglądasz jako gość — zarejestruj się, aby organizować!',
+    calendarDownloaded: 'Wydarzenie kalendarza pobrane!',
+    googleCalendar: 'Kalendarz Google',
+    appleCalendar: 'Kalendarz Apple / iCal',
+    cancel: 'Anuluj',
+    signInToJoin: 'Zaloguj się, aby dołączyć i otrzymywać przypomnienia.',
+    signInToHost: 'Zaloguj się, aby organizować własne aktywności.',
+    signInToCalendar: 'Zaloguj się, aby dodawać wydarzenia do kalendarza.',
+    joinConfirmTitle: 'Idziesz!',
+    joinConfirmText: 'Dodaj to do kalendarza, żeby nie zapomnieć.',
+    done: 'Gotowe',
+    installTip: 'Wskazówka: Dodaj Gather do ekranu głównego!',
+    comingSoon: 'wkrótce!',
+  }
+};
+
+function t(key) {
+  const lang = state.appLang || 'en';
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key;
+}
+
+function setAppLanguage(lang) {
+  state.appLang = lang;
+  localStorage.setItem('gather-lang', lang);
+  // Re-render everything with new language
+  document.querySelector('#search-input').placeholder = t('searchPlaceholder');
+  document.querySelectorAll('.nav-item span').forEach((s, i) => {
+    const labels = ['map', 'list', null, 'saved', 'profile'];
+    if (labels[i]) s.textContent = t(labels[i]);
+  });
+  // Re-render panels and views
+  renderCategories();
+  renderActivities();
+  // Update filter panel text
+  refreshFilterPanel();
+  // Update create panel text
+  refreshCreatePanel();
+  toast(`${lang === 'pl' ? 'Język zmieniony na polski' : 'Language set to English'}`);
+}
+
+function refreshFilterPanel() {
+  const fp = document.querySelector('#filter-panel .panel-body');
+  if (!fp) return;
+  fp.innerHTML = `
+    <div class="filter-section">
+      <h3>${t('language')}</h3>
+      <div class="filter-chips">
+        <div class="filter-chip ${state.filters.lang==='all'?'active':''}" data-lang="all" onclick="setLangFilter('all')">${t('all')}</div>
+        <div class="filter-chip ${state.filters.lang==='en'?'active':''}" data-lang="en" onclick="setLangFilter('en')">🇬🇧 ${t('english')}</div>
+        <div class="filter-chip ${state.filters.lang==='pl'?'active':''}" data-lang="pl" onclick="setLangFilter('pl')">🇵🇱 ${t('polish')}</div>
+        <div class="filter-chip ${state.filters.lang==='en_pl'?'active':''}" data-lang="en_pl" onclick="setLangFilter('en_pl')">🇬🇧🇵🇱 ${t('both')}</div>
+      </div>
+    </div>
+    <div class="filter-section">
+      <h3>${t('when')}</h3>
+      <div class="filter-chips">
+        <div class="filter-chip ${state.filters.time==='all'?'active':''}" data-time="all" onclick="setTimeFilter('all')">${t('anyTime')}</div>
+        <div class="filter-chip ${state.filters.time==='today'?'active':''}" data-time="today" onclick="setTimeFilter('today')">${t('today')}</div>
+        <div class="filter-chip ${state.filters.time==='week'?'active':''}" data-time="week" onclick="setTimeFilter('week')">${t('thisWeek')}</div>
+        <div class="filter-chip ${state.filters.time==='weekend'?'active':''}" data-time="weekend" onclick="setTimeFilter('weekend')">${t('weekend')}</div>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">${t('pickDate')}</label>
+        <input type="date" id="filter-date" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;" value="${state.filters.date||''}" onchange="setDateFilter(this.value)">
+      </div>
+    </div>
+    <div class="filter-section">
+      <h3>${t('type')}</h3>
+      <div class="filter-chips">
+        <div class="filter-chip ${state.filters.type==='all'?'active':''}" data-type="all" onclick="setTypeFilter('all')">${t('all')}</div>
+        <div class="filter-chip ${state.filters.type==='free'?'active':''}" data-type="free" onclick="setTypeFilter('free')">${t('freeOnly')}</div>
+        <div class="filter-chip ${state.filters.type==='recurring'?'active':''}" data-type="recurring" onclick="setTypeFilter('recurring')">${t('recurring')}</div>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary btn-full" onclick="applyFilters()">${t('applyFilters')}</button>
+  `;
+}
+
+function refreshCreatePanel() {
+  const h = document.querySelector('#create-panel .panel-header h2');
+  if (h) h.textContent = t('hostActivity');
+  // Update labels
+  const labels = document.querySelectorAll('#create-panel .form-group label');
+  const labelKeys = ['activityTitle', 'description', 'category', 'activityLang', 'locationName', 'address', 'date', 'time', 'frequency', 'maxPeople'];
+  labels.forEach((l, i) => { if (labelKeys[i]) l.textContent = t(labelKeys[i]); });
+  const hint = document.getElementById('frequency-hint');
+  if (hint) hint.textContent = t('freqHint');
+  const createBtn = document.querySelector('#create-panel .btn-primary');
+  if (createBtn) createBtn.textContent = t('createActivity');
+}
 
 // ============================================
 // DEMO DATA (used when Supabase is not connected)
@@ -1163,29 +1472,32 @@ async function init() {
     state.activities = DEMO_ACTIVITIES;
     showApp();
   } else {
-    // Check existing session
+    // Load public data first — app opens without sign-in
+    await loadCities();
+    await loadCategories();
+    state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
+    await loadActivities();
+
+    // Check if user is already signed in
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       state.user = session.user;
       await loadProfile();
-      await loadCities();
-      await loadCategories();
-      state.currentCity = state.cities[0];
-      await loadActivities();
-      showApp();
-    } else {
-      showAuth();
     }
+
+    showApp();
   }
 }
 
-function showAuth() {
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('app').classList.add('hidden');
+function showAuth(message) {
+  // Update subtitle if custom message provided
+  if (message) {
+    document.getElementById('auth-panel-subtitle').textContent = message;
+  }
+  openPanel('auth-panel');
 }
 
 function showApp() {
-  document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('current-city-name').textContent = state.currentCity.name;
   updateUserButton();
@@ -1193,6 +1505,16 @@ function showApp() {
   populateCreateForm();
   initMap();
   renderActivities();
+  // Apply saved language
+  if (state.appLang !== 'en') {
+    document.querySelector('#search-input').placeholder = t('searchPlaceholder');
+    document.querySelectorAll('.nav-item span').forEach((s, i) => {
+      const labels = ['map', 'list', null, 'saved', 'profile'];
+      if (labels[i]) s.textContent = t(labels[i]);
+    });
+    refreshFilterPanel();
+    refreshCreatePanel();
+  }
 }
 
 // ============================================
@@ -1222,11 +1544,11 @@ async function handleAuth() {
   }
 
   if (state.demoMode) {
-    // Demo mode: fake auth
     state.user = { id: 'demo-user', email, user_metadata: { display_name: name || email.split('@')[0] } };
     state.profile = { id: 'demo-user', display_name: name || email.split('@')[0], is_premium: false };
-    showApp();
-    toast('Welcome to Gather!');
+    closeAllPanels();
+    updateUserButton();
+    toast(t('welcomeGather'));
     return;
   }
 
@@ -1250,12 +1572,9 @@ async function handleAuth() {
 
     state.user = result.data.user;
     await loadProfile();
-    await loadCities();
-    await loadCategories();
-    state.currentCity = state.cities[0];
-    await loadActivities();
-    showApp();
-    toast(authMode === 'signup' ? 'Welcome to Gather!' : 'Welcome back!');
+    closeAllPanels();
+    updateUserButton();
+    toast(authMode === 'signup' ? t('welcomeGather') : t('welcomeBack'));
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
@@ -1263,13 +1582,29 @@ async function handleAuth() {
 }
 
 function skipAuth() {
-  state.demoMode = true;
-  state.cities = DEMO_CITIES;
-  state.categories = DEMO_CATEGORIES;
-  state.currentCity = DEMO_CITIES[0];
-  state.activities = DEMO_ACTIVITIES;
-  showApp();
-  toast('Browsing as guest — sign up to host activities!');
+  closeAllPanels();
+  toast(t('guestTip'));
+}
+
+// Social login (Google, Apple)
+async function socialLogin(provider) {
+  if (state.demoMode) {
+    toast(`${provider} login requires Supabase connection`);
+    return;
+  }
+
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (error) throw error;
+    // OAuth redirects — user comes back signed in
+  } catch (err) {
+    toast('Error: ' + err.message);
+  }
 }
 
 function updateUserButton() {
@@ -1348,6 +1683,30 @@ function renderActivities() {
   renderListView(filtered);
 }
 
+// Timing helpers
+function getActivityTiming(activity) {
+  const now = new Date();
+  const start = new Date(activity.starts_at);
+  const end = activity.ends_at ? new Date(activity.ends_at) : new Date(start.getTime() + (activity.duration_minutes || 120) * 60000);
+  const hoursUntil = (start - now) / 3600000;
+
+  if (now >= start && now <= end) return 'now';
+  if (hoursUntil > 0 && hoursUntil <= 24) return 'soon';
+  if (hoursUntil > 0 && hoursUntil <= 72) return 'upcoming';
+  return 'later';
+}
+
+function getTimingBadge(activity) {
+  const timing = getActivityTiming(activity);
+  const spotsLeft = activity.max_participants ? activity.max_participants - (activity.participants || 0) : null;
+
+  let badges = '';
+  if (timing === 'now') badges += `<span class="timing-badge now">${t('liveNow')}</span> `;
+  else if (timing === 'soon') badges += `<span class="timing-badge soon">${t('within24h')}</span> `;
+  if (spotsLeft !== null && spotsLeft <= 3 && spotsLeft > 0) badges += `<span class="timing-badge few-spots">${spotsLeft} ${spotsLeft === 1 ? t('spotLeft') : t('spotsLeft')}</span>`;
+  return badges;
+}
+
 function getFilteredActivities() {
   let items = state.activities.filter(a => a.city_id === state.currentCity.id || a.city_id === state.currentCity.name.toLowerCase().replace('ó','o'));
 
@@ -1380,6 +1739,16 @@ function getFilteredActivities() {
     });
   }
 
+  // Date picker filter
+  if (state.filters.date) {
+    const filterDate = new Date(state.filters.date);
+    const nextDay = new Date(filterDate.getTime() + 86400000);
+    items = items.filter(a => {
+      const d = new Date(a.starts_at);
+      return d >= filterDate && d < nextDay;
+    });
+  }
+
   // Type filter
   if (state.filters.type === 'free') {
     items = items.filter(a => !a.price_cents || a.price_cents === 0);
@@ -1397,6 +1766,15 @@ function getFilteredActivities() {
     );
   }
 
+  // Sort chronologically — live events first, then soonest upcoming
+  items.sort((a, b) => {
+    const ta = getActivityTiming(a);
+    const tb = getActivityTiming(b);
+    const order = { now: 0, soon: 1, upcoming: 2, later: 3 };
+    if (order[ta] !== order[tb]) return order[ta] - order[tb];
+    return new Date(a.starts_at) - new Date(b.starts_at);
+  });
+
   return items;
 }
 
@@ -1412,10 +1790,12 @@ function renderMarkers(activities) {
     const cat = getCategoryInfo(activity.category_id);
     const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
     const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
+    const timing = getActivityTiming(activity);
+    const timingClass = timing === 'now' ? 'happening-now' : timing === 'soon' ? 'happening-soon' : '';
 
     const icon = L.divIcon({
       className: '',
-      html: `<div class="activity-marker ${activity.is_business ? 'business' : ''}" style="background:${cat.color}">
+      html: `<div class="activity-marker ${activity.is_business ? 'business' : ''} ${timingClass}" style="background:${cat.color}">
         ${cat.icon}
         <div class="marker-lang-badge ${langClass}">${langLabel}</div>
       </div>`,
@@ -1436,7 +1816,7 @@ function renderMarkers(activities) {
 function renderListView(activities) {
   const el = document.getElementById('list-view');
   if (!activities.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔍</p><p style="font-weight:600">No activities found</p><p style="font-size:13px;margin-top:4px">Try changing your filters or search</p></div>';
+    el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔍</p><p style="font-weight:600">${t('noActivities')}</p><p style="font-size:13px;margin-top:4px">${t('tryChangingFilters')}</p></div>`;
     return;
   }
 
@@ -1445,15 +1825,19 @@ function renderListView(activities) {
     const langClass = a.lang === 'en_pl' ? 'en-pl' : a.lang;
     const langLabel = a.lang === 'en' ? '🇬🇧 EN' : a.lang === 'pl' ? '🇵🇱 PL' : '🇬🇧🇵🇱';
     const date = new Date(a.starts_at);
-    const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
-    const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    const price = a.price_cents ? `${(a.price_cents/100).toFixed(0)} PLN` : 'Free';
-    const freq = a.frequency === 'one_time' ? '' : `· ${a.frequency}`;
+    const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
+    const dateStr = date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    const price = a.price_cents ? `${(a.price_cents/100).toFixed(0)} PLN` : t('free');
+    const freqLabels = { one_time: '', weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
+    const freq = freqLabels[a.frequency] ? `· ${freqLabels[a.frequency]}` : '';
+    const badges = getTimingBadge(a);
 
     return `<div class="list-card" onclick='openDetailById("${a.id}")'>
       <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
       <div class="list-card-info">
         <h3>${a.title}</h3>
+        ${badges ? `<div style="margin:3px 0">${badges}</div>` : ''}
         <div class="list-meta">
           <span>📅 ${dateStr} ${timeStr}</span>
           <span>📍 ${a.location_name || ''}</span>
@@ -1501,7 +1885,17 @@ function setLangFilter(val) {
 }
 function setTimeFilter(val) {
   state.filters.time = val;
+  state.filters.date = null; // Clear date picker when using preset
+  const datePicker = document.getElementById('filter-date');
+  if (datePicker) datePicker.value = '';
   document.querySelectorAll('[data-time]').forEach(c => c.classList.toggle('active', c.dataset.time === val));
+}
+function setDateFilter(val) {
+  state.filters.date = val || null;
+  if (val) {
+    state.filters.time = 'all'; // Clear preset when using date picker
+    document.querySelectorAll('[data-time]').forEach(c => c.classList.toggle('active', c.dataset.time === 'all'));
+  }
 }
 function setTypeFilter(val) {
   state.filters.type = val;
@@ -1534,7 +1928,7 @@ function switchView(view) {
 function renderSavedView() {
   // In demo mode, show placeholder
   const el = document.getElementById('list-view');
-  el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔖</p><p style="font-weight:600">No saved activities yet</p><p style="font-size:13px;margin-top:4px">Tap the bookmark icon on any activity to save it</p></div>';
+  el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔖</p><p style="font-weight:600">${t('noSaved')}</p><p style="font-size:13px;margin-top:4px">${t('tapBookmark')}</p></div>`;
 }
 
 // ============================================
@@ -1562,10 +1956,11 @@ function openDetail(activity) {
   const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
   const langLabel = activity.lang === 'en' ? '🇬🇧 English' : activity.lang === 'pl' ? '🇵🇱 Polish' : '🇬🇧🇵🇱 EN & PL';
   const date = new Date(activity.starts_at);
-  const dateStr = date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : 'Free';
-  const freqLabel = { one_time: 'One-time', weekly: 'Every week', biweekly: 'Every 2 weeks', monthly: 'Monthly', daily: 'Daily' };
+  const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
+  const dateStr = date.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : t('free');
+  const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
   const hostInitial = (activity.host_name || 'A')[0].toUpperCase();
   const isFull = activity.max_participants && activity.participants >= activity.max_participants;
 
@@ -1576,6 +1971,7 @@ function openDetail(activity) {
     </div>
     <div class="detail-info">
       <h1>${activity.title}</h1>
+      ${getTimingBadge(activity) ? `<div style="margin:8px 0">${getTimingBadge(activity)}</div>` : ''}
       <div class="detail-meta">
         <div class="meta-item">📅 ${dateStr}</div>
         <div class="meta-item">🕐 ${timeStr}</div>
@@ -1585,20 +1981,25 @@ function openDetail(activity) {
         <div class="meta-item">💰 ${price}</div>
       </div>
       <p class="detail-description">${activity.description || ''}</p>
-      <div class="detail-host">
+      ${activity.source_url && activity.source !== 'user' ?
+        `<div class="detail-host" onclick="window.open('${activity.source_url}','_blank')" style="cursor:pointer">` :
+        `<div class="detail-host">`}
         <div class="detail-host-avatar">${hostInitial}</div>
         <div>
-          <div class="detail-host-name">${activity.host_name || 'Anonymous'}</div>
-          <div class="detail-host-label">Host${activity.source !== 'user' ? ' · via ' + activity.source.replace('scraped_','') : ''}</div>
+          <div class="detail-host-name">${activity.host_name || 'Anonymous'} ${activity.source_url && activity.source !== 'user' ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
+          <div class="detail-host-label">${t('host')}${activity.source !== 'user' ? ' · ' + t('via') + ' ' + activity.source.replace('scraped_','') : ''}</div>
         </div>
       </div>
       <div class="detail-participants">
-        <span class="count">${activity.participants || 0}</span>${activity.max_participants ? ' / ' + activity.max_participants : ''} participants
-        ${isFull ? '<span style="color:var(--danger);font-weight:600"> — Full</span>' : ''}
+        <span class="count">${activity.participants || 0}</span>${activity.max_participants ? ' / ' + activity.max_participants : ''} ${t('participants')}
+        ${isFull ? `<span style="color:var(--danger);font-weight:600"> — ${t('full')}</span>` : ''}
       </div>
       <div class="detail-actions">
         <button class="btn ${isFull ? 'btn-secondary' : 'btn-primary'} btn-full" onclick="joinActivity('${activity.id}')" ${isFull ? 'disabled' : ''}>
-          ${isFull ? 'Full — Join Waitlist' : '✋ Join Activity'}
+          ${isFull ? t('joinWaitlist') : '✋ ' + t('joinActivity')}
+        </button>
+        <button class="btn btn-secondary" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="padding:12px 16px" title="Add to Calendar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
         <button class="btn btn-secondary" onclick="saveActivity('${activity.id}')" style="padding:12px 16px" title="Save">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1611,18 +2012,16 @@ function openDetail(activity) {
 
 async function joinActivity(activityId) {
   if (!state.user) {
-    toast('Sign up to join activities!');
     closeAllPanels();
-    showAuth();
+    setTimeout(() => showAuth(t('signInToJoin')), 350);
     return;
   }
 
+  const activity = state.activities.find(x => x.id === activityId);
+
   if (state.demoMode) {
-    const a = state.activities.find(x => x.id === activityId);
-    if (a) a.participants = (a.participants || 0) + 1;
-    toast('You joined! See you there 🎉');
-    closeAllPanels();
-    renderActivities();
+    if (activity) activity.participants = (activity.participants || 0) + 1;
+    showJoinConfirmation(activity);
     return;
   }
 
@@ -1633,20 +2032,111 @@ async function joinActivity(activityId) {
     });
     if (error) throw error;
     await loadActivities();
-    toast('You joined! See you there 🎉');
-    closeAllPanels();
-    renderActivities();
+    showJoinConfirmation(activity);
   } catch (err) {
     if (err.message?.includes('duplicate')) {
-      toast('You already joined this activity');
+      toast(t('alreadyJoined'));
     } else {
       toast('Error: ' + err.message);
     }
   }
 }
 
+function showJoinConfirmation(activity) {
+  if (!activity) { toast(t('youJoined') + ' 🎉'); closeAllPanels(); renderActivities(); return; }
+  const cat = getCategoryInfo(activity.category_id);
+  document.getElementById('detail-content').innerHTML = `
+    <div class="panel-handle"></div>
+    <div class="join-confirm" style="padding:32px 20px;">
+      <div class="check-icon">✓</div>
+      <h3>${t('joinConfirmTitle')}</h3>
+      <p>${activity.title}</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:24px">${t('joinConfirmText')}</p>
+      <button class="btn btn-primary btn-full" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}');" style="margin-bottom:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        ${t('addToCalendar')}
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="closeAllPanels();renderActivities();">${t('done')}</button>
+    </div>
+  `;
+  renderActivities();
+}
+
 function saveActivity(activityId) {
-  toast('Activity saved! 🔖');
+  toast(t('activitySaved') + ' 🔖');
+}
+
+// ============================================
+// ADD TO CALENDAR
+// ============================================
+function addToCalendar(titleEnc, startsAt, locationEnc, descEnc) {
+  if (!state.user) {
+    closeAllPanels();
+    setTimeout(() => showAuth(t('signInToCalendar')), 350);
+    return;
+  }
+  const title = decodeURIComponent(titleEnc);
+  const location = decodeURIComponent(locationEnc);
+  const desc = decodeURIComponent(descEnc);
+  const start = new Date(startsAt);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
+
+  // Format for Google Calendar
+  const fmt = d => d.toISOString().replace(/[-:]/g, '').replace('.000', '');
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(start)}/${fmt(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(desc + '\n\nFound on Gather — gather-app-pink.vercel.app')}`;
+
+  // Generate .ics file for Apple Calendar
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Gather//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${title}`,
+    `LOCATION:${location}`,
+    `DESCRIPTION:${desc}\\nFound on Gather`,
+    `URL:https://gather-app-pink.vercel.app`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  // Show options
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;padding:20px;z-index:3000;box-shadow:0 -4px 20px rgba(0,0,0,0.15);max-width:480px;margin:0 auto;';
+  panel.innerHTML = `
+    <div style="width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px;"></div>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">${t('addToCalendar')}</h3>
+    <a href="${googleUrl}" target="_blank" class="btn btn-full" style="background:#4285F4;color:white;margin-bottom:10px;text-decoration:none;" onclick="this.parentElement.parentElement.remove()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${t('googleCalendar')}
+    </a>
+    <button class="btn btn-full" style="background:#333;color:white;margin-bottom:10px;" onclick="downloadICS(this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${t('appleCalendar')}
+    </button>
+    <button class="btn btn-secondary btn-full" onclick="this.parentElement.parentElement.remove()">${t('cancel')}</button>
+  `;
+
+  // Store ICS data on button
+  panel.querySelector('[onclick*="downloadICS"]').dataset.ics = icsContent;
+  panel.querySelector('[onclick*="downloadICS"]').dataset.title = title;
+
+  document.body.appendChild(panel);
+}
+
+function downloadICS(btn) {
+  const ics = btn.dataset.ics;
+  const title = btn.dataset.title;
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.ics';
+  a.click();
+  URL.revokeObjectURL(url);
+  btn.closest('div[style]').remove();
+  toast(t('calendarDownloaded'));
 }
 
 // ============================================
@@ -1666,8 +2156,7 @@ function populateCreateForm() {
 
 function openCreateActivity() {
   if (!state.user) {
-    toast('Sign up to host activities!');
-    showAuth();
+    showAuth(t('signInToHost'));
     return;
   }
   openPanel('create-panel');
@@ -1686,13 +2175,13 @@ async function submitActivity() {
   const maxP = document.getElementById('create-max').value;
 
   if (!title || !locationName || !date || !time) {
-    toast('Please fill in all required fields');
+    toast(t('fillRequired'));
     return;
   }
 
   // Freemium check
   if (frequency !== 'one_time' && state.profile && !state.profile.is_premium) {
-    toast('⭐ Premium required for recurring events');
+    toast('⭐ ' + t('premiumRequired'));
     return;
   }
 
@@ -1724,7 +2213,7 @@ async function submitActivity() {
     state.activities.push(newActivity);
     closeAllPanels();
     renderActivities();
-    toast('Activity created! 🎉');
+    toast(t('activityCreated') + ' 🎉');
     // Clear form
     document.getElementById('create-title').value = '';
     document.getElementById('create-desc').value = '';
@@ -1754,10 +2243,10 @@ async function submitActivity() {
     await loadActivities();
     closeAllPanels();
     renderActivities();
-    toast('Activity created! 🎉');
+    toast(t('activityCreated') + ' 🎉');
   } catch (err) {
     if (err.message?.includes('Premium')) {
-      toast('⭐ Premium required for recurring events');
+      toast('⭐ ' + t('premiumRequired'));
     } else {
       toast('Error: ' + err.message);
     }
@@ -1769,8 +2258,9 @@ async function submitActivity() {
 // ============================================
 function openCityPicker() {
   const el = document.getElementById('city-list');
+  document.getElementById('city-panel-title').textContent = t('chooseCity');
   const cityIcons = { 'Warsaw': '🏙️', 'Kraków': '🏰' };
-  const cityDescs = { 'Warsaw': 'Capital city · 1.8M population', 'Kraków': 'Cultural capital · 800K population' };
+  const cityDescs = { 'Warsaw': t('capitalCity'), 'Kraków': t('culturalCapital') };
 
   el.innerHTML = state.cities.map(c => `
     <div class="city-option ${c.id === state.currentCity.id ? 'active' : ''}" onclick="selectCity('${c.id}')">
@@ -1799,13 +2289,15 @@ async function selectCity(cityId) {
 
   state.map.flyTo([city.lat, city.lng], city.zoom_level || 13, { duration: 1.5 });
   renderActivities();
-  toast(`Switched to ${city.name}`);
+  toast(`${t('switchedTo')} ${city.name}`);
 }
 
 // ============================================
 // FILTERS PANEL
 // ============================================
 function openFilters() {
+  document.getElementById('filter-panel-title').textContent = t('filters');
+  refreshFilterPanel();
   openPanel('filter-panel');
 }
 
@@ -1818,14 +2310,21 @@ function openProfile() {
   if (!state.user) {
     el.innerHTML = `
       <div class="panel-header">
-        <h2>Profile</h2>
+        <h2>${t('profile')}</h2>
         <button class="panel-close" onclick="closeAllPanels()">&times;</button>
       </div>
       <div class="panel-body" style="text-align:center;padding-top:40px;">
         <p style="font-size:48px;margin-bottom:16px">👤</p>
-        <p style="font-weight:600;margin-bottom:8px">You're browsing as a guest</p>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Sign up to host and join activities</p>
-        <button class="btn btn-primary btn-full" onclick="closeAllPanels();showAuth();">Sign Up / Log In</button>
+        <p style="font-weight:600;margin-bottom:8px">${t('browsingAsGuest')}</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">${t('signUpToHost')}</p>
+        <button class="btn btn-primary btn-full" onclick="closeAllPanels();setTimeout(()=>showAuth(),350);">${t('signUpLogIn')}</button>
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);text-align:left;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">${t('appLanguage')}</div>
+          <div class="lang-toggle">
+            <button class="lang-toggle-btn ${state.appLang==='en'?'active':''}" onclick="setAppLanguage('en');openProfile();">🇬🇧 English</button>
+            <button class="lang-toggle-btn ${state.appLang==='pl'?'active':''}" onclick="setAppLanguage('pl');openProfile();">🇵🇱 Polski</button>
+          </div>
+        </div>
       </div>
     `;
   } else {
@@ -1835,7 +2334,7 @@ function openProfile() {
 
     el.innerHTML = `
       <div class="panel-header">
-        <h2>Profile</h2>
+        <h2>${t('profile')}</h2>
         <button class="panel-close" onclick="closeAllPanels()">&times;</button>
       </div>
       <div class="panel-body">
@@ -1844,23 +2343,30 @@ function openProfile() {
           <div class="profile-name">${name} ${isPremium ? '<span class="premium-badge">⭐ Premium</span>' : ''}</div>
           <div class="profile-email">${state.user.email || ''}</div>
         </div>
-        <div class="profile-menu-item" onclick="toast('Edit profile coming soon!')">
+        <div class="profile-menu-item" onclick="toast('${t('editProfile')} — ${t('comingSoon')}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Edit Profile
+          ${t('editProfile')}
         </div>
-        <div class="profile-menu-item" onclick="toast('Your hosted activities coming soon!')">
+        <div class="profile-menu-item" onclick="toast('${t('myActivities')} — ${t('comingSoon')}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          My Activities
+          ${t('myActivities')}
         </div>
         ${!isPremium ? `
-        <div class="profile-menu-item" onclick="toast('Premium upgrade coming soon!')">
+        <div class="profile-menu-item" onclick="toast('${t('upgradePremium')} — ${t('comingSoon')}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span>Upgrade to Premium</span>
+          <span>${t('upgradePremium')}</span>
           <span class="premium-badge" style="margin-left:auto">⭐ PRO</span>
         </div>` : ''}
+        <div style="padding:16px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">${t('appLanguage')}</div>
+          <div class="lang-toggle">
+            <button class="lang-toggle-btn ${state.appLang==='en'?'active':''}" onclick="setAppLanguage('en');openProfile();">🇬🇧 English</button>
+            <button class="lang-toggle-btn ${state.appLang==='pl'?'active':''}" onclick="setAppLanguage('pl');openProfile();">🇵🇱 Polski</button>
+          </div>
+        </div>
         <div class="profile-menu-item" onclick="handleLogout()" style="color:var(--danger)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Log Out
+          ${t('logOut')}
         </div>
       </div>
     `;
@@ -1914,7 +2420,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   // Show install hint after 30 seconds of use
   setTimeout(() => {
     if (deferredPrompt) {
-      toast('Tip: Add Gather to your home screen for the best experience!');
+      toast(t('installTip'));
     }
   }, 30000);
 });
