@@ -1478,6 +1478,18 @@ async function init() {
     state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
     await loadActivities();
 
+    // Fall back to demo data if database is empty (pre-scraper)
+    if (!state.activities.length) {
+      state.activities = DEMO_ACTIVITIES;
+    }
+    if (!state.categories.length) {
+      state.categories = DEMO_CATEGORIES;
+    }
+    if (!state.cities.length) {
+      state.cities = DEMO_CITIES;
+      state.currentCity = DEMO_CITIES[1];
+    }
+
     // Check if user is already signed in
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
