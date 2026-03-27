@@ -1,7 +1,7 @@
 // Gather — Service Worker
 // Enables offline support, caching, and PWA installability
 
-const CACHE_NAME = 'gather-v1';
+const CACHE_NAME = 'gather-v2';
 const OFFLINE_URL = 'offline.html';
 
 // Assets to pre-cache on install
@@ -73,25 +73,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: cache-first, network fallback
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+  // HTML pages: network-first (always get latest), fallback to cache
+  if (event.request.mode === 'navigate' || event.request.url.endsWith('.html') || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
-          // Cache successful responses
           if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
-        .catch(() => {
-          // If it's a page navigation, show offline page
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
+        .catch(() => caches.match(event.request).then(c => c || caches.match(OFFLINE_URL)))
+    );
+    return;
+  }
+
+  // Everything else (JS libs, CSS, images): cache-first, network fallback
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
-        });
+          return response;
+        })
+        .catch(() => {});
     })
   );
 });
