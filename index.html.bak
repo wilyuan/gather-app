@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gather — Discover Real-World Activities</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Supabase JS (UMD bundle for script tag compatibility) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+/* ============================================
+   CSS RESET & VARIABLES
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #a5b4fc;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.12);
+  --nav-height: 72px;
+  --header-height: 56px;
+  --lang-en: #3b82f6;
+  --lang-pl: #ef4444;
+  --lang-enpl: #8b5cf6;
+}
+
+html, body {
+  height: 100%; width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.hidden { display: none !important; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.w-full { width: 100%; }
+.text-center { text-align: center; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================
+   LAYOUT
+   ============================================ */
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+#header {
+  height: var(--header-height);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+  flex-shrink: 0;
+}
+
+#header .logo {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+#header .city-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+#header .city-switcher:hover { border-color: var(--primary); }
+#header .city-switcher svg { width: 14px; height: 14px; }
+
+#header .user-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s;
+}
+#header .user-btn:hover { transform: scale(1.1); }
+
+/* ============================================
+   SEARCH BAR
+   ============================================ */
+#search-bar {
+  position: absolute;
+  top: calc(var(--header-height) + 12px);
+  left: 12px;
+  right: 12px;
+  z-index: 900;
+  display: flex;
+  gap: 8px;
+}
+
+#search-bar input {
+  flex: 1;
+  height: 44px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0 20px;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+  outline: none;
+  transition: border-color 0.2s;
+}
+#search-bar input:focus { border-color: var(--primary); }
+
+#search-bar .filter-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+#search-bar .filter-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+/* ============================================
+   CATEGORY PILLS
+   ============================================ */
+#category-bar {
+  position: absolute;
+  top: calc(var(--header-height) + 68px);
+  left: 0; right: 0;
+  z-index: 900;
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#category-bar::-webkit-scrollbar { display: none; }
+
+.cat-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.cat-pill:hover { border-color: var(--primary); }
+.cat-pill.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* ============================================
+   MAP
+   ============================================ */
+#map-container {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.leaflet-container { font-family: inherit; }
+
+/* Custom map markers */
+.activity-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  border: 3px solid white;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.activity-marker:hover { transform: scale(1.2); }
+
+.activity-marker.business {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  opacity: 0.7;
+  border-width: 2px;
+}
+
+/* Language badge on marker */
+.marker-lang-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  font-size: 9px;
+  background: white;
+  border-radius: 6px;
+  padding: 1px 3px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.marker-lang-badge.en { color: var(--lang-en); }
+.marker-lang-badge.pl { color: var(--lang-pl); }
+.marker-lang-badge.en-pl { color: var(--lang-enpl); }
+
+/* ============================================
+   BOTTOM NAV
+   ============================================ */
+#bottom-nav {
+  height: var(--nav-height);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  flex-shrink: 0;
+  z-index: 1000;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.nav-item svg { width: 22px; height: 22px; }
+.nav-item.active { color: var(--primary); }
+.nav-item:hover { background: var(--bg); }
+
+.nav-add-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  margin-top: -20px;
+  transition: transform 0.2s;
+}
+.nav-add-btn:hover { transform: scale(1.1); }
+.nav-add-btn svg { width: 26px; height: 26px; }
+
+/* ============================================
+   PANELS & MODALS
+   ============================================ */
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.panel-overlay.visible { opacity: 1; pointer-events: all; }
+
+.slide-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--card);
+  border-radius: var(--radius) var(--radius) 0 0;
+  z-index: 2001;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+.slide-panel.visible { transform: translateY(0); }
+
+.panel-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+.panel-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.panel-body { padding: 16px 20px 32px; }
+
+/* ============================================
+   ACTIVITY DETAIL CARD
+   ============================================ */
+#detail-panel .detail-hero {
+  height: 180px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  position: relative;
+}
+
+#detail-panel .detail-hero img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+.detail-lang-badge {
+  position: absolute;
+  top: 12px; right: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+}
+.detail-lang-badge.en { background: var(--lang-en); }
+.detail-lang-badge.pl { background: var(--lang-pl); }
+.detail-lang-badge.en-pl { background: var(--lang-enpl); }
+
+.detail-info { padding: 20px; }
+.detail-info h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.detail-meta .meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.detail-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.detail-host {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 20px;
+}
+.detail-host-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+.detail-host-name { font-weight: 600; font-size: 14px; }
+.detail-host-label { font-size: 12px; color: var(--text-muted); }
+
+.detail-participants {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.detail-participants .count { color: var(--text); font-weight: 700; }
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================
+   FORMS
+   ============================================ */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--card);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--primary); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.form-row { display: flex; gap: 12px; }
+.form-row > .form-group { flex: 1; }
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ============================================
+   LIST VIEW
+   ============================================ */
+#list-view {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  overflow-y: auto;
+  padding: calc(var(--header-height) + 120px) 12px 12px;
+  z-index: 800;
+}
+
+.list-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1px solid var(--border);
+}
+.list-card:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.list-card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.list-card-info { flex: 1; min-width: 0; }
+.list-card-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.list-card-info .list-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 10px; flex-wrap: wrap; }
+
+.list-card .lang-tag {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.lang-tag.en { background: var(--lang-en); }
+.lang-tag.pl { background: var(--lang-pl); }
+.lang-tag.en-pl { background: var(--lang-enpl); }
+
+/* ============================================
+   AUTH SCREENS
+   ============================================ */
+#auth-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--card);
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+#auth-screen .auth-logo {
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+#auth-screen .auth-tagline {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+#auth-screen .auth-box {
+  width: 100%;
+  max-width: 360px;
+}
+#auth-screen .auth-toggle {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+#auth-screen .auth-toggle a {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+#auth-screen .auth-skip {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-error {
+  background: #fef2f2;
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ============================================
+   CITY PICKER PANEL
+   ============================================ */
+.city-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.city-option:hover { background: var(--bg); }
+.city-option.active { border-color: var(--primary); background: #eef2ff; }
+.city-option .city-icon { font-size: 28px; }
+.city-option .city-name { font-weight: 700; font-size: 15px; }
+.city-option .city-desc { font-size: 12px; color: var(--text-muted); }
+
+/* ============================================
+   FILTER PANEL
+   ============================================ */
+.filter-section { margin-bottom: 20px; }
+.filter-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+.filter-chip:hover { border-color: var(--primary); }
+
+/* ============================================
+   PROFILE / SETTINGS
+   ============================================ */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  gap: 12px;
+}
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+}
+.profile-name { font-size: 20px; font-weight: 700; }
+.profile-email { font-size: 13px; color: var(--text-muted); }
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.profile-menu-item:hover { color: var(--primary); }
+.profile-menu-item svg { width: 20px; height: 20px; color: var(--text-muted); }
+
+/* ============================================
+   TOAST
+   ============================================ */
+.toast {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 16px);
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+}
+.toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (min-width: 768px) {
+  #header { padding: 0 24px; }
+  #search-bar { left: 24px; right: 24px; max-width: 480px; }
+  #category-bar { padding: 0 24px; }
+  .slide-panel { max-width: 480px; left: 50%; transform: translateX(-50%) translateY(100%); }
+  .slide-panel.visible { transform: translateX(-50%) translateY(0); }
+  .nav-add-btn { width: 56px; height: 56px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     AUTH SCREEN
+     ============================================ -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-logo">Gather</div>
+  <div class="auth-tagline">Discover real-world activities nearby</div>
+  <div class="auth-box">
+    <div id="auth-error" class="auth-error hidden"></div>
+    <div class="form-group">
+      <label id="auth-name-label" for="auth-name">Display Name</label>
+      <input type="text" id="auth-name" placeholder="Your name">
+    </div>
+    <div class="form-group">
+      <label for="auth-email">Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label for="auth-password">Password</label>
+      <input type="password" id="auth-password" placeholder="Min 6 characters">
+    </div>
+    <button id="auth-submit" class="btn btn-primary btn-full" onclick="handleAuth()">
+      Sign Up
+    </button>
+    <div class="auth-toggle">
+      <span id="auth-toggle-text">Already have an account? </span>
+      <a id="auth-toggle-link" onclick="toggleAuthMode()">Log In</a>
+    </div>
+    <div class="auth-skip" onclick="skipAuth()">Browse without an account</div>
+  </div>
+</div>
+
+<!-- ============================================
+     MAIN APP
+     ============================================ -->
+<div id="app" class="hidden">
+
+  <!-- Header -->
+  <div id="header">
+    <div class="logo">Gather</div>
+    <div class="city-switcher" onclick="openCityPicker()">
+      <span id="current-city-name">Kraków</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <button class="user-btn" id="user-btn" onclick="openProfile()">?</button>
+  </div>
+
+  <!-- Search -->
+  <div id="search-bar">
+    <input type="text" id="search-input" placeholder="Search activities..." oninput="handleSearch()">
+    <div class="filter-btn" onclick="openFilters()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+    </div>
+  </div>
+
+  <!-- Category pills -->
+  <div id="category-bar"></div>
+
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-loading" class="loading-overlay hidden"><div class="spinner"></div></div>
+  </div>
+
+  <!-- List view (toggled) -->
+  <div id="list-view" class="hidden"></div>
+
+  <!-- Bottom Nav -->
+  <div id="bottom-nav">
+    <button class="nav-item active" data-view="map" onclick="switchView('map')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>Map</span>
+    </button>
+    <button class="nav-item" data-view="list" onclick="switchView('list')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>List</span>
+    </button>
+    <button class="nav-add-btn" onclick="openCreateActivity()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="nav-item" data-view="saved" onclick="switchView('saved')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <span>Saved</span>
+    </button>
+    <button class="nav-item" onclick="openProfile()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============================================
+     PANELS
+     ============================================ -->
+
+<!-- Overlay -->
+<div id="panel-overlay" class="panel-overlay" onclick="closeAllPanels()"></div>
+
+<!-- Activity Detail -->
+<div id="detail-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div id="detail-content"></div>
+</div>
+
+<!-- Create Activity -->
+<div id="create-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <h2>Host an Activity</h2>
+    <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+  </div>
+  <div class="panel-body">
+    <div class="form-group">
+      <label for="create-title">Activity Title *</label>
+      <input type="text" id="create-title" placeholder="e.g. Saturday Board Game Night">
+    </div>
+    <div class="form-group">
+      <label for="create-desc">Description</label>
+      <textarea id="create-desc" placeholder="What will you do? Who should join?"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="create-category">Category *</label>
+        <select id="create-category"></select>
+      </div>
+      <div class="form-group">
+        <label for="create-lang">Language *</label>
+        <select id="create-lang">
+          <option value="en">🇬🇧 English</option>
+          <option value="pl">🇵🇱 Polish</option>
+          <option value="en_pl">🇬🇧🇵🇱 Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="create-location">Location Name *</label>
+      <input type="text" id="create-location" placeholder="e.g. Cafe Botanica, Park Łazienkowski">
+    </div>
+    <div class="form-group">
+      <label for="create-address">Address</label>
+      <input type="text" id="create-address" placeholder="Street address (optional)">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="create-date">Date *</label>
+        <input type="date" id="create-date">
+      </div>
+      <div class="form-group">
+        <label for="create-time">Time *</label>
+        <input type="time" id="create-time" value="18:00">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="create-frequency">Frequency</label>
+        <select id="create-frequency">
+          <option value="one_time">One-time (Free)</option>
+          <option value="weekly">Weekly ⭐ Premium</option>
+          <option value="biweekly">Biweekly ⭐ Premium</option>
+          <option value="monthly">Monthly ⭐ Premium</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="create-max">Max People</label>
+        <input type="number" id="create-max" placeholder="No limit" min="2" max="200">
+      </div>
+    </div>
+    <p class="form-hint" id="frequency-hint">One-time events are always free. Recurring events require a Premium subscription.</p>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary btn-full" onclick="submitActivity()">Create Activity</button>
+  </div>
+</div>
+
+<!-- City Picker -->
+<div id="city-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <h2>Choose City</h2>
+    <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+  </div>
+  <div class="panel-body" id="city-list"></div>
+</div>
+
+<!-- Filters -->
+<div id="filter-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <h2>Filters</h2>
+    <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+  </div>
+  <div class="panel-body">
+    <div class="filter-section">
+      <h3>Language</h3>
+      <div class="filter-chips">
+        <div class="filter-chip active" data-lang="all" onclick="setLangFilter('all')">All</div>
+        <div class="filter-chip" data-lang="en" onclick="setLangFilter('en')">🇬🇧 English</div>
+        <div class="filter-chip" data-lang="pl" onclick="setLangFilter('pl')">🇵🇱 Polish</div>
+        <div class="filter-chip" data-lang="en_pl" onclick="setLangFilter('en_pl')">🇬🇧🇵🇱 Both</div>
+      </div>
+    </div>
+    <div class="filter-section">
+      <h3>When</h3>
+      <div class="filter-chips">
+        <div class="filter-chip active" data-time="all" onclick="setTimeFilter('all')">Any time</div>
+        <div class="filter-chip" data-time="today" onclick="setTimeFilter('today')">Today</div>
+        <div class="filter-chip" data-time="week" onclick="setTimeFilter('week')">This week</div>
+        <div class="filter-chip" data-time="weekend" onclick="setTimeFilter('weekend')">Weekend</div>
+      </div>
+    </div>
+    <div class="filter-section">
+      <h3>Type</h3>
+      <div class="filter-chips">
+        <div class="filter-chip active" data-type="all" onclick="setTypeFilter('all')">All</div>
+        <div class="filter-chip" data-type="free" onclick="setTypeFilter('free')">Free only</div>
+        <div class="filter-chip" data-type="recurring" onclick="setTypeFilter('recurring')">Recurring</div>
+      </div>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary btn-full" onclick="applyFilters()">Apply Filters</button>
+  </div>
+</div>
+
+<!-- Profile -->
+<div id="profile-panel" class="slide-panel">
+  <div class="panel-handle"></div>
+  <div id="profile-content"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- ============================================
+     JAVASCRIPT
+     ============================================ -->
+<script>
+// ============================================
+// CONFIG — Replace with your Supabase project
+// ============================================
+const SUPABASE_URL = 'https://whuqnhcmzorvapjfedka.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXFuaGNtem9ydmFwamZlZGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDEyMzcsImV4cCI6MjA5MDExNzIzN30.VoxjWD05nSA7EpH7l36lr-rbOV2DB13N2rp-_CeMtVM';
+
+// Initialize Supabase client
+let sb = null;
+try {
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase && window.supabase.createClient) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch(e) {
+  console.warn('Supabase not configured, running in demo mode');
+}
+
+// ============================================
+// STATE
+// ============================================
+const state = {
+  user: null,
+  profile: null,
+  currentCity: null,
+  cities: [],
+  categories: [],
+  activities: [],
+  markers: [],
+  filters: { category: null, lang: 'all', time: 'all', type: 'all', search: '' },
+  currentView: 'map',
+  authMode: 'signup', // 'signup' or 'login'
+  demoMode: !sb,
+  map: null,
+  markerLayer: null
+};
+
+// ============================================
+// DEMO DATA (used when Supabase is not connected)
+// ============================================
+const DEMO_CITIES = [
+  { id: 'warsaw', name: 'Warsaw', country: 'Poland', lat: 52.2297, lng: 21.0122, zoom_level: 13 },
+  { id: 'krakow', name: 'Kraków', country: 'Poland', lat: 50.0647, lng: 19.9450, zoom_level: 13 }
+];
+
+const DEMO_CATEGORIES = [
+  { id: 'sports', name: 'Sports & Fitness', icon: '⚽', color: '#ef4444' },
+  { id: 'boardgames', name: 'Board Games', icon: '🎲', color: '#f97316' },
+  { id: 'music', name: 'Music', icon: '🎵', color: '#eab308' },
+  { id: 'art', name: 'Art & Craft', icon: '🎨', color: '#84cc16' },
+  { id: 'language', name: 'Language Exchange', icon: '🗣️', color: '#22c55e' },
+  { id: 'outdoor', name: 'Outdoor & Nature', icon: '🌿', color: '#14b8a6' },
+  { id: 'tech', name: 'Tech & Coding', icon: '💻', color: '#3b82f6' },
+  { id: 'food', name: 'Food & Cooking', icon: '🍳', color: '#8b5cf6' },
+  { id: 'photo', name: 'Photography', icon: '📸', color: '#ec4899' },
+  { id: 'dancing', name: 'Dancing', icon: '💃', color: '#f43f5e' },
+  { id: 'bookclub', name: 'Book Club', icon: '📚', color: '#6366f1' },
+  { id: 'yoga', name: 'Yoga & Wellness', icon: '🧘', color: '#a855f7' },
+  { id: 'tcg', name: 'Trading Cards', icon: '🃏', color: '#0ea5e9' },
+  { id: 'running', name: 'Running', icon: '🏃', color: '#10b981' },
+  { id: 'volunteer', name: 'Volunteering', icon: '🤝', color: '#f59e0b' }
+];
+
+const DEMO_ACTIVITIES = [
+  // ===== WARSAW =====
+  { id:'w1', title:'Saturday Morning parkrun', description:'Free timed 5K run in Pole Mokotowskie park. All paces welcome — walk, jog, or race. Meet at the main fountain.', category_id:'running', city_id:'warsaw', host_name:'ParkrunWarsaw', lat:52.2130, lng:21.0050, location_name:'Pole Mokotowskie', starts_at:'2026-03-28T09:00:00', frequency:'weekly', lang:'en_pl', participants:45, max_participants:200, source:'scraped_facebook' },
+  { id:'w2', title:'Board Game Wednesdays @ Planszówkowa', description:'Drop-in board game night! We have 200+ games available. Beginners welcome. Beer & snacks at the bar.', category_id:'boardgames', city_id:'warsaw', host_name:'Planszówkowa Cafe', lat:52.2324, lng:21.0168, location_name:'Planszówkowa', address:'ul. Krucza 23/31', starts_at:'2026-04-01T18:30:00', frequency:'weekly', lang:'en_pl', participants:18, max_participants:30, source:'scraped_google' },
+  { id:'w3', title:'Expat Language Exchange — EN/PL', description:'Practice Polish or English in a relaxed atmosphere. Native speakers of both languages. 10-min conversation rounds, then switch partners.', category_id:'language', city_id:'warsaw', host_name:'Warsaw Polyglots', lat:52.2292, lng:21.0171, location_name:'Cafe Kulturalna', address:'Plac Defilad 1', starts_at:'2026-03-27T19:00:00', frequency:'weekly', lang:'en_pl', participants:32, max_participants:50, source:'scraped_meetup' },
+  { id:'w4', title:'Vistula Sunset Kayaking', description:'2-hour paddle on the Vistula River at golden hour. Equipment provided. No experience needed — we teach basics first.', category_id:'outdoor', city_id:'warsaw', host_name:'KajakiWawa', lat:52.2425, lng:21.0275, location_name:'Przystań na Wiśle', starts_at:'2026-04-05T17:30:00', frequency:'one_time', lang:'en', participants:8, max_participants:12, source:'user' },
+  { id:'w5', title:'Bachata Social Night', description:'Open social dancing — all levels. 30-min beginner lesson at 20:00, then open floor until midnight. DJ plays bachata, kizomba, salsa.', category_id:'dancing', city_id:'warsaw', host_name:'DanceMasters Warsaw', lat:52.2219, lng:21.0088, location_name:'Soda Underground', address:'ul. Nowogrodzka 11', starts_at:'2026-03-28T20:00:00', frequency:'weekly', lang:'en_pl', participants:55, max_participants:80, source:'scraped_facebook' },
+  { id:'w6', title:'Magic: The Gathering — Friday Night', description:'Casual MTG Friday night event. Standard and Commander formats. Entry fee 15 PLN includes 1 booster pack. All skill levels.', category_id:'tcg', city_id:'warsaw', host_name:'Centrum Gier Pegaz', lat:52.2280, lng:21.0020, location_name:'Centrum Gier Pegaz', address:'ul. Grójecka 1/3', starts_at:'2026-03-28T17:00:00', frequency:'weekly', lang:'pl', participants:24, max_participants:32, price_cents:1500, source:'scraped_google' },
+  { id:'w7', title:'Urban Sketching Walk — Praga District', description:'Sketch the colorful murals and pre-war architecture of Praga. Bring your own sketchbook. Watercolors and pencils available to borrow.', category_id:'art', city_id:'warsaw', host_name:'SketchWarsaw', lat:52.2540, lng:21.0370, location_name:'Praga Północ', address:'ul. Ząbkowska 27/31', starts_at:'2026-03-29T11:00:00', frequency:'one_time', lang:'en', participants:9, max_participants:15, source:'user' },
+  { id:'w8', title:'Python Meetup — AI & Data Science', description:'Monthly meetup for Python developers. This month: building RAG apps with local LLMs. 2 talks + networking + pizza.', category_id:'tech', city_id:'warsaw', host_name:'PyWarsaw', lat:52.2335, lng:20.9990, location_name:'Google Campus Warsaw', starts_at:'2026-04-03T18:00:00', frequency:'monthly', lang:'en', participants:78, max_participants:120, source:'scraped_meetup' },
+  { id:'w9', title:'Ashtanga Yoga in Łazienki Park', description:'Free outdoor yoga session on Saturday mornings. Bring your own mat. We practice the Primary Series together. All levels welcome.', category_id:'yoga', city_id:'warsaw', host_name:'YogaOutdoors.pl', lat:52.2152, lng:21.0358, location_name:'Łazienki Królewskie Park', starts_at:'2026-03-29T08:00:00', frequency:'weekly', lang:'en_pl', participants:22, max_participants:40, source:'scraped_facebook' },
+  { id:'w10', title:'Pierogis & Polish Cooking Class', description:'Learn to make classic pierogi ruskie from scratch. All ingredients provided. Take home what you cook! Beer and good company included.', category_id:'food', city_id:'warsaw', host_name:'CookPoland', lat:52.2368, lng:21.0011, location_name:'Cooking Lab Warsaw', address:'ul. Chmielna 21', starts_at:'2026-04-06T15:00:00', frequency:'one_time', lang:'en', participants:6, max_participants:10, price_cents:12000, source:'scraped_google' },
+  { id:'w11', title:'Sunday Book Club — English', description:'Monthly book club for English readers. This month: "Tomorrow, and Tomorrow, and Tomorrow" by Gabrielle Zevin. Newcomers welcome!', category_id:'bookclub', city_id:'warsaw', host_name:'ReadersOfWarsaw', lat:52.2255, lng:21.0140, location_name:'Czuły Barbarzyńca Bookshop', address:'ul. Dobra 31', starts_at:'2026-04-06T16:00:00', frequency:'monthly', lang:'en', participants:14, max_participants:20, source:'user' },
+  { id:'w12', title:'Street Photography Walk — Old Town', description:'2-hour photo walk through Warsaw Old Town. Learn composition and street photography tips. Bring any camera (phone is fine!).', category_id:'photo', city_id:'warsaw', host_name:'FotoWawa', lat:52.2497, lng:21.0122, location_name:'Rynek Starego Miasta', starts_at:'2026-03-30T10:00:00', frequency:'one_time', lang:'en_pl', participants:11, max_participants:16, source:'user' },
+  { id:'w13', title:'Beach Volleyball @ Praga Beach', description:'Recreational 4v4 volleyball on the Vistula beach. Mixed levels. Just show up — we organize teams on the spot.', category_id:'sports', city_id:'warsaw', host_name:'VolleyVistula', lat:52.2455, lng:21.0410, location_name:'Praga Beach Bar', starts_at:'2026-04-05T15:00:00', frequency:'weekly', lang:'en_pl', participants:14, max_participants:16, source:'scraped_facebook' },
+  { id:'w14', title:'Open Jam Session — Jazz & Blues', description:'Bring your instrument and jam! House rhythm section provided (keys, bass, drums). Singers welcome. No cover charge.', category_id:'music', city_id:'warsaw', host_name:'12on14 Jazz Club', lat:52.2232, lng:21.0142, location_name:'12on14 Jazz Club', address:'ul. Nowogrodzka 12', starts_at:'2026-03-27T20:30:00', frequency:'weekly', lang:'en_pl', participants:20, max_participants:35, source:'scraped_google' },
+  { id:'w15', title:'Cleanup Crew — Kamionek Neighborhood', description:'Join our monthly neighborhood cleanup! We provide gloves, bags, and good vibes. Coffee and pastries after.', category_id:'volunteer', city_id:'warsaw', host_name:'Clean Warsaw', lat:52.2478, lng:21.0512, location_name:'Kamionek', starts_at:'2026-04-06T10:00:00', frequency:'monthly', lang:'pl', participants:19, max_participants:40, source:'scraped_facebook' },
+  { id:'w16', title:'Bouldering Social — Beginners Welcome', description:'Group bouldering session for beginners and intermediates. Rental shoes included in the entry fee. We coach each other!', category_id:'sports', city_id:'warsaw', host_name:'ClimbWawa', lat:52.2190, lng:20.9875, location_name:'Murall Wall', address:'ul. Bitwy Warszawskiej 10', starts_at:'2026-03-29T14:00:00', frequency:'weekly', lang:'en', participants:12, max_participants:20, price_cents:3500, source:'user' },
+  { id:'w17', title:'Pokémon TCG League', description:'Weekly Pokémon Trading Card Game league. Standard format. Open play and mini-tournaments. Prizes for top 4.', category_id:'tcg', city_id:'warsaw', host_name:'Centrum Gier Pegaz', lat:52.2280, lng:21.0020, location_name:'Centrum Gier Pegaz', address:'ul. Grójecka 1/3', starts_at:'2026-03-30T12:00:00', frequency:'weekly', lang:'pl', participants:16, max_participants:24, source:'scraped_google' },
+  { id:'w18', title:'Ceramics Workshop — Make Your Own Mug', description:'Handcraft your own ceramic mug! All materials and kiln firing included. Take your finished piece home in 2 weeks.', category_id:'art', city_id:'warsaw', host_name:'Glina Workshop', lat:52.2360, lng:21.0210, location_name:'Glina Workshop', address:'ul. Mokotowska 48', starts_at:'2026-04-05T11:00:00', frequency:'one_time', lang:'en_pl', participants:4, max_participants:8, price_cents:9500, source:'scraped_google' },
+  { id:'w19', title:'5-a-side Football — Sundays', description:'Casual 5-a-side football at Torwar sports center. All genders, all levels. We split teams fairly. 10 PLN per person.', category_id:'sports', city_id:'warsaw', host_name:'KickWarsaw', lat:52.2200, lng:21.0205, location_name:'Torwar Sports Center', starts_at:'2026-03-30T11:00:00', frequency:'weekly', lang:'en', participants:9, max_participants:10, price_cents:1000, source:'scraped_facebook' },
+  { id:'w20', title:'Meditation & Sound Bath', description:'Guided meditation followed by a crystal singing bowl sound bath. Perfect for stress relief. Mats provided. Wear comfortable clothes.', category_id:'yoga', city_id:'warsaw', host_name:'Inner Peace Warsaw', lat:52.2310, lng:21.0080, location_name:'Centrum Mindfulness', address:'ul. Wilcza 25A', starts_at:'2026-04-02T19:00:00', frequency:'one_time', lang:'en_pl', participants:18, max_participants:25, price_cents:4000, source:'user' },
+  { id:'w21', title:'Salsa Rueda Workshop', description:'Learn the Cuban group salsa style! Beginners class at 19:00, intermediate at 20:00. Partners not required.', category_id:'dancing', city_id:'warsaw', host_name:'SalsaWarszawa', lat:52.2350, lng:21.0150, location_name:'Dance Flow Studio', address:'ul. Żurawia 6/12', starts_at:'2026-03-28T19:00:00', frequency:'weekly', lang:'en_pl', participants:28, max_participants:40, price_cents:2500, source:'scraped_google' },
+  { id:'w22', title:'Night Cycling Tour — Warsaw Neon Signs', description:'Explore Warsaw famous neon signs on a nighttime bike ride. We provide lights & helmets. 15 km easy-pace route.', category_id:'outdoor', city_id:'warsaw', host_name:'BikeTourWawa', lat:52.2320, lng:21.0100, location_name:'Centrum metro station', starts_at:'2026-04-04T21:00:00', frequency:'one_time', lang:'en', participants:7, max_participants:15, source:'user' },
+  { id:'w23', title:'D&D One-Shot — English', description:'Single-session Dungeons & Dragons adventure. Pre-made characters available. New players very welcome! Snacks provided.', category_id:'boardgames', city_id:'warsaw', host_name:'DiceAndDragons', lat:52.2350, lng:21.0100, location_name:'Między Kartkami Café', address:'ul. Nowogrodzka 27', starts_at:'2026-03-29T13:00:00', frequency:'one_time', lang:'en', participants:4, max_participants:6, source:'user' },
+  { id:'w24', title:'Sushi Making Class', description:'Learn to make nigiri, maki, and uramaki rolls from a Japanese chef. All ingredients and equipment provided. BYOB!', category_id:'food', city_id:'warsaw', host_name:'TokyoKitchen.pl', lat:52.2270, lng:21.0155, location_name:'Tokyo Kitchen Studio', address:'ul. Hoża 50', starts_at:'2026-04-12T12:00:00', frequency:'one_time', lang:'en', participants:5, max_participants:8, price_cents:15000, source:'scraped_google' },
+
+  // ===== KRAKÓW =====
+  { id:'k1', title:'Kraków Hash House Harriers', description:'The "drinking club with a running problem." 5-8 km trail run/walk through Kraków. Social pub visit after. Tourists & expats very welcome.', category_id:'running', city_id:'krakow', host_name:'Kraków H3', lat:50.0600, lng:19.9370, location_name:'Rynek Główny (Main Square)', starts_at:'2026-03-29T15:00:00', frequency:'biweekly', lang:'en', participants:25, max_participants:50, source:'scraped_facebook' },
+  { id:'k2', title:'Board Game Café Night', description:'Open board game night at Cybermachina. 500+ games available. Food and craft beer at the bar. No reservation needed.', category_id:'boardgames', city_id:'krakow', host_name:'Cybermachina', lat:50.0565, lng:19.9373, location_name:'Cybermachina Gaming Pub', address:'ul. Krupnicza 7', starts_at:'2026-03-27T18:00:00', frequency:'weekly', lang:'en_pl', participants:22, max_participants:40, source:'scraped_google' },
+  { id:'k3', title:'Conversational Polish for Foreigners', description:'Friendly Polish practice for non-native speakers. A1-B1 level. Native speakers volunteer as conversation partners. Free!', category_id:'language', city_id:'krakow', host_name:'PolishForAll', lat:50.0625, lng:19.9344, location_name:'Bunkier Sztuki Café', address:'pl. Szczepański 3a', starts_at:'2026-03-28T17:00:00', frequency:'weekly', lang:'en_pl', participants:20, max_participants:30, source:'scraped_meetup' },
+  { id:'k4', title:'Zakopane Day Hike — Morskie Oko', description:'Guided hike to Morskie Oko lake in the Tatras. Transport from Kraków included. 6-hour moderate hike. Bring lunch and water.', category_id:'outdoor', city_id:'krakow', host_name:'HikeTatry', lat:50.0647, lng:19.9370, location_name:'Meeting point: Kraków Główny station', starts_at:'2026-04-05T07:00:00', frequency:'one_time', lang:'en', participants:14, max_participants:20, price_cents:8000, source:'user' },
+  { id:'k5', title:'Salsa & Bachata Social — Kazimierz', description:'Latin social dance night in the heart of Kazimierz. Bachata room + Salsa room. Mini-lesson at 20:00.', category_id:'dancing', city_id:'krakow', host_name:'DanceCracow', lat:50.0490, lng:19.9450, location_name:'Kitsch Club', address:'ul. Wielopole 15', starts_at:'2026-03-28T20:00:00', frequency:'weekly', lang:'en_pl', participants:40, max_participants:70, price_cents:2000, source:'scraped_facebook' },
+  { id:'k6', title:'Warhammer 40K — Open Play', description:'Bring your army for open casual play. Tables and terrain provided. Painting station available. New players can try demo games.', category_id:'tcg', city_id:'krakow', host_name:'Dragon Lair Kraków', lat:50.0615, lng:19.9250, location_name:'Dragon Lair', address:'ul. Smoleńsk 16', starts_at:'2026-03-29T12:00:00', frequency:'weekly', lang:'pl', participants:12, max_participants:20, source:'scraped_google' },
+  { id:'k7', title:'Plein Air Painting — Wawel Views', description:'Paint the iconic Wawel Castle from the riverbank. Oil, acrylic, or watercolor welcome. Bring your own supplies. Free group critique after.', category_id:'art', city_id:'krakow', host_name:'ArtKraków', lat:50.0540, lng:19.9350, location_name:'Vistula Riverbank near Wawel', starts_at:'2026-03-30T10:00:00', frequency:'one_time', lang:'en', participants:7, max_participants:15, source:'user' },
+  { id:'k8', title:'Kraków Tech Meetup — Startup Edition', description:'Monthly tech meetup focused on startups. 3 lightning talks + Q&A + networking. Free beer courtesy of sponsors.', category_id:'tech', city_id:'krakow', host_name:'TechKrakow', lat:50.0620, lng:19.9210, location_name:'Hub:raum Kraków', starts_at:'2026-04-10T18:00:00', frequency:'monthly', lang:'en', participants:65, max_participants:100, source:'scraped_meetup' },
+  { id:'k9', title:'Morning Yoga on Błonia Fields', description:'Free outdoor yoga every Saturday. Vinyasa flow suitable for all levels. Bring your mat, water, and good energy.', category_id:'yoga', city_id:'krakow', host_name:'YogaKRK', lat:50.0580, lng:19.9120, location_name:'Błonia Fields', starts_at:'2026-03-29T08:30:00', frequency:'weekly', lang:'en_pl', participants:28, max_participants:50, source:'scraped_facebook' },
+  { id:'k10', title:'Polish Pierogi Masterclass', description:'Cook authentic pierogi from scratch with a local chef. Try 3 fillings: ruskie, mushroom, and sweet. Eat what you make!', category_id:'food', city_id:'krakow', host_name:'CookKraków', lat:50.0515, lng:19.9445, location_name:'Kogel Mogel Cooking Studio', address:'ul. Józefa 17 (Kazimierz)', starts_at:'2026-04-06T14:00:00', frequency:'one_time', lang:'en', participants:5, max_participants:8, price_cents:13000, source:'scraped_google' },
+  { id:'k11', title:'English Book Club — Kazimierz', description:'Monthly literary fiction book club. This month: "Intermezzo" by Sally Rooney. Discussion + wine at Massolit Books.', category_id:'bookclub', city_id:'krakow', host_name:'KazimierzReaders', lat:50.0530, lng:19.9370, location_name:'Massolit Books & Café', address:'ul. Felicjanek 4', starts_at:'2026-04-13T17:00:00', frequency:'monthly', lang:'en', participants:10, max_participants:15, source:'user' },
+  { id:'k12', title:'Nowa Huta Photo Safari', description:'Explore the socialist-realist architecture of Nowa Huta with cameras in hand. We cover composition, light, and storytelling.', category_id:'photo', city_id:'krakow', host_name:'FotoKraków', lat:50.0726, lng:20.0380, location_name:'Plac Centralny, Nowa Huta', starts_at:'2026-04-05T10:00:00', frequency:'one_time', lang:'en_pl', participants:8, max_participants:12, source:'user' },
+  { id:'k13', title:'5-a-side Football — Tuesdays', description:'Weekly football under the floodlights at Wisła training grounds. Mixed abilities, great atmosphere. 15 PLN per head.', category_id:'sports', city_id:'krakow', host_name:'KickCracow', lat:50.0528, lng:19.9110, location_name:'Wisła Kraków Training Ground', starts_at:'2026-04-01T19:00:00', frequency:'weekly', lang:'en_pl', participants:9, max_participants:10, price_cents:1500, source:'scraped_facebook' },
+  { id:'k14', title:'Live Jazz Jam — Alchemia', description:'Open jam session at legendary Alchemia bar in Kazimierz. Bring your axe. Rhythm section provided. No cover.', category_id:'music', city_id:'krakow', host_name:'Alchemia', lat:50.0510, lng:19.9455, location_name:'Alchemia', address:'ul. Estery 5 (Kazimierz)', starts_at:'2026-03-27T21:00:00', frequency:'weekly', lang:'en_pl', participants:15, max_participants:25, source:'scraped_google' },
+  { id:'k15', title:'Planty Park Cleanup', description:'Monthly cleanup of the Planty park ring. Bring your own reusable gloves if possible. We supply bags and pickers.', category_id:'volunteer', city_id:'krakow', host_name:'CleanKraków', lat:50.0620, lng:19.9350, location_name:'Planty Park (Brama Floriańska entrance)', starts_at:'2026-04-06T09:00:00', frequency:'monthly', lang:'pl', participants:25, max_participants:50, source:'scraped_facebook' },
+  { id:'k16', title:'Bouldering @ CityBoulder', description:'Beginner-friendly bouldering session. Rental shoes available. We rotate problems and cheer each other on. Entry 25 PLN.', category_id:'sports', city_id:'krakow', host_name:'BoulderKRK', lat:50.0705, lng:19.9270, location_name:'CityBoulder Kraków', starts_at:'2026-03-29T15:00:00', frequency:'weekly', lang:'en', participants:10, max_participants:16, price_cents:2500, source:'user' },
+  { id:'k17', title:'Catan Championship — Kraków Edition', description:'Settlers of Catan tournament! 4 rounds of Swiss pairings. Top 4 win store credit. Entry fee includes drink.', category_id:'boardgames', city_id:'krakow', host_name:'Cybermachina', lat:50.0565, lng:19.9373, location_name:'Cybermachina Gaming Pub', address:'ul. Krupnicza 7', starts_at:'2026-04-12T14:00:00', frequency:'one_time', lang:'en_pl', participants:16, max_participants:24, price_cents:2000, source:'scraped_google' },
+  { id:'k18', title:'Lindy Hop Social Dance', description:'Swing dance social in the Old Town. Taster class at 19:30, open floor 20:00-23:00. No partner needed.', category_id:'dancing', city_id:'krakow', host_name:'SwingKraków', lat:50.0635, lng:19.9365, location_name:'Harris Piano Jazz Bar', address:'Rynek Główny 28', starts_at:'2026-03-29T19:30:00', frequency:'weekly', lang:'en_pl', participants:30, max_participants:50, price_cents:2000, source:'scraped_facebook' },
+  { id:'k19', title:'Vistula Kayak Tour — Kraków to Tyniec', description:'Scenic 12km downstream paddle to the Benedictine Abbey in Tyniec. Equipment and transport back included. 3-4 hours.', category_id:'outdoor', city_id:'krakow', host_name:'KajakiKraków', lat:50.0470, lng:19.9340, location_name:'Kayak Launch — Dębniki Bridge', starts_at:'2026-04-12T10:00:00', frequency:'one_time', lang:'en', participants:6, max_participants:12, price_cents:7500, source:'scraped_google' },
+  { id:'k20', title:'Sushi & Sake Night', description:'Make sushi rolls, sashimi, and pair with sake tasting. Fun group activity for 8 people. All ingredients included.', category_id:'food', city_id:'krakow', host_name:'UmamiKRK', lat:50.0530, lng:19.9420, location_name:'Umami Cooking Studio', address:'ul. Miodowa 15 (Kazimierz)', starts_at:'2026-04-19T18:00:00', frequency:'one_time', lang:'en', participants:3, max_participants:8, price_cents:16000, source:'scraped_google' },
+  { id:'k21', title:'Mindfulness Meditation — Kazimierz', description:'Guided 45-minute meditation session followed by tea and discussion. All traditions welcome. Donation-based.', category_id:'yoga', city_id:'krakow', host_name:'ZenKraków', lat:50.0505, lng:19.9440, location_name:'Mleczarnia Café', address:'ul. Meiselsa 20', starts_at:'2026-04-02T19:00:00', frequency:'weekly', lang:'en_pl', participants:12, max_participants:20, source:'user' },
+  { id:'k22', title:'Songwriting Circle', description:'Share original songs or works-in-progress in a supportive circle. Acoustic instruments only. All genres.', category_id:'music', city_id:'krakow', host_name:'MuzycznyKrąg', lat:50.0495, lng:19.9480, location_name:'Tektura Café', address:'ul. Kącik 7', starts_at:'2026-04-06T18:00:00', frequency:'biweekly', lang:'en_pl', participants:7, max_participants:12, source:'user' },
+  { id:'k23', title:'Crypto & Web3 Meetup', description:'Monthly meetup for blockchain enthusiasts. This month: DeFi in 2026. Talks + live demos + networking.', category_id:'tech', city_id:'krakow', host_name:'BlockchainKRK', lat:50.0615, lng:19.9250, location_name:'Impact Hub Kraków', address:'ul. Wielopole 17', starts_at:'2026-04-17T18:00:00', frequency:'monthly', lang:'en', participants:35, max_participants:60, source:'scraped_meetup' },
+  { id:'k24', title:'Watercolor Workshop — Flowers', description:'Paint spring flowers in watercolor! Materials provided. Complete beginner to intermediate. Take home your artwork.', category_id:'art', city_id:'krakow', host_name:'ArtKraków', lat:50.0555, lng:19.9400, location_name:'Starmach Gallery Annex', address:'ul. Węgłowa 5', starts_at:'2026-04-13T11:00:00', frequency:'one_time', lang:'en_pl', participants:5, max_participants:10, price_cents:8000, source:'scraped_google' }
+];
+
+// ============================================
+// INITIALIZATION
+// ============================================
+async function init() {
+  if (state.demoMode) {
+    state.cities = DEMO_CITIES;
+    state.categories = DEMO_CATEGORIES;
+    state.currentCity = DEMO_CITIES[1]; // Kraków — launch city
+    state.activities = DEMO_ACTIVITIES;
+    showApp();
+  } else {
+    // Check existing session
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      state.user = session.user;
+      await loadProfile();
+      await loadCities();
+      await loadCategories();
+      state.currentCity = state.cities[0];
+      await loadActivities();
+      showApp();
+    } else {
+      showAuth();
+    }
+  }
+}
+
+function showAuth() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('current-city-name').textContent = state.currentCity.name;
+  updateUserButton();
+  renderCategories();
+  populateCreateForm();
+  initMap();
+  renderActivities();
+}
+
+// ============================================
+// AUTH
+// ============================================
+let authMode = 'signup';
+
+function toggleAuthMode() {
+  authMode = authMode === 'signup' ? 'login' : 'signup';
+  document.getElementById('auth-submit').textContent = authMode === 'signup' ? 'Sign Up' : 'Log In';
+  document.getElementById('auth-toggle-text').textContent = authMode === 'signup' ? 'Already have an account? ' : "Don't have an account? ";
+  document.getElementById('auth-toggle-link').textContent = authMode === 'signup' ? 'Log In' : 'Sign Up';
+  document.getElementById('auth-name-label').parentElement.classList.toggle('hidden', authMode === 'login');
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const name = document.getElementById('auth-name').value.trim();
+  const errorEl = document.getElementById('auth-error');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please enter email and password.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  if (state.demoMode) {
+    // Demo mode: fake auth
+    state.user = { id: 'demo-user', email, user_metadata: { display_name: name || email.split('@')[0] } };
+    state.profile = { id: 'demo-user', display_name: name || email.split('@')[0], is_premium: false };
+    showApp();
+    toast('Welcome to Gather!');
+    return;
+  }
+
+  try {
+    let result;
+    if (authMode === 'signup') {
+      if (!name) {
+        errorEl.textContent = 'Please enter your display name.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      result = await sb.auth.signUp({
+        email, password,
+        options: { data: { display_name: name } }
+      });
+    } else {
+      result = await sb.auth.signInWithPassword({ email, password });
+    }
+
+    if (result.error) throw result.error;
+
+    state.user = result.data.user;
+    await loadProfile();
+    await loadCities();
+    await loadCategories();
+    state.currentCity = state.cities[0];
+    await loadActivities();
+    showApp();
+    toast(authMode === 'signup' ? 'Welcome to Gather!' : 'Welcome back!');
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function skipAuth() {
+  state.demoMode = true;
+  state.cities = DEMO_CITIES;
+  state.categories = DEMO_CATEGORIES;
+  state.currentCity = DEMO_CITIES[0];
+  state.activities = DEMO_ACTIVITIES;
+  showApp();
+  toast('Browsing as guest — sign up to host activities!');
+}
+
+function updateUserButton() {
+  const btn = document.getElementById('user-btn');
+  if (state.profile) {
+    btn.textContent = (state.profile.display_name || '?')[0].toUpperCase();
+  } else if (state.user) {
+    btn.textContent = (state.user.email || '?')[0].toUpperCase();
+  } else {
+    btn.textContent = '?';
+  }
+}
+
+// ============================================
+// DATA LOADING (Supabase)
+// ============================================
+async function loadProfile() {
+  if (!sb || !state.user) return;
+  const { data } = await sb.from('profiles').select('*').eq('id', state.user.id).single();
+  state.profile = data;
+}
+
+async function loadCities() {
+  if (!sb) return;
+  const { data } = await sb.from('cities').select('*').eq('active', true).order('name');
+  state.cities = data || [];
+}
+
+async function loadCategories() {
+  if (!sb) return;
+  const { data } = await sb.from('categories').select('*').order('sort_order');
+  state.categories = data || [];
+}
+
+async function loadActivities() {
+  if (!sb || !state.currentCity) return;
+  const { data } = await sb
+    .from('activities')
+    .select('*, category:categories(*), host:profiles(display_name, avatar_url), participant_count:participants(count)')
+    .eq('city_id', state.currentCity.id)
+    .eq('status', 'active')
+    .order('starts_at');
+  state.activities = (data || []).map(a => ({
+    ...a,
+    category_id: a.category?.id || a.category_id,
+    host_name: a.host?.display_name || 'Anonymous',
+    participants: a.participant_count?.[0]?.count || 0
+  }));
+}
+
+// ============================================
+// MAP
+// ============================================
+function initMap() {
+  if (state.map) { state.map.remove(); }
+
+  state.map = L.map('map', {
+    center: [state.currentCity.lat, state.currentCity.lng],
+    zoom: state.currentCity.zoom_level || 13,
+    zoomControl: false
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(state.map);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+
+  state.markerLayer = L.layerGroup().addTo(state.map);
+}
+
+function renderActivities() {
+  const filtered = getFilteredActivities();
+  renderMarkers(filtered);
+  renderListView(filtered);
+}
+
+function getFilteredActivities() {
+  let items = state.activities.filter(a => a.city_id === state.currentCity.id || a.city_id === state.currentCity.name.toLowerCase().replace('ó','o'));
+
+  // Category filter
+  if (state.filters.category) {
+    items = items.filter(a => a.category_id === state.filters.category);
+  }
+
+  // Language filter
+  if (state.filters.lang !== 'all') {
+    items = items.filter(a => a.lang === state.filters.lang);
+  }
+
+  // Time filter
+  if (state.filters.time !== 'all') {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+
+    items = items.filter(a => {
+      const d = new Date(a.starts_at);
+      if (state.filters.time === 'today') return d >= today && d < new Date(today.getTime() + 86400000);
+      if (state.filters.time === 'week') return d >= today && d <= endOfWeek;
+      if (state.filters.time === 'weekend') {
+        const day = d.getDay();
+        return (day === 0 || day === 6) && d >= today;
+      }
+      return true;
+    });
+  }
+
+  // Type filter
+  if (state.filters.type === 'free') {
+    items = items.filter(a => !a.price_cents || a.price_cents === 0);
+  } else if (state.filters.type === 'recurring') {
+    items = items.filter(a => a.frequency !== 'one_time');
+  }
+
+  // Search
+  if (state.filters.search) {
+    const q = state.filters.search.toLowerCase();
+    items = items.filter(a =>
+      a.title.toLowerCase().includes(q) ||
+      (a.description && a.description.toLowerCase().includes(q)) ||
+      (a.location_name && a.location_name.toLowerCase().includes(q))
+    );
+  }
+
+  return items;
+}
+
+function getCategoryInfo(catId) {
+  return state.categories.find(c => c.id === catId) || { icon: '📍', color: '#6366f1', name: 'Other' };
+}
+
+function renderMarkers(activities) {
+  if (!state.markerLayer) return;
+  state.markerLayer.clearLayers();
+
+  activities.forEach(activity => {
+    const cat = getCategoryInfo(activity.category_id);
+    const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
+    const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="activity-marker ${activity.is_business ? 'business' : ''}" style="background:${cat.color}">
+        ${cat.icon}
+        <div class="marker-lang-badge ${langClass}">${langLabel}</div>
+      </div>`,
+      iconSize: [38, 38],
+      iconAnchor: [19, 19]
+    });
+
+    const marker = L.marker([activity.lat, activity.lng], { icon })
+      .on('click', () => openDetail(activity));
+
+    state.markerLayer.addLayer(marker);
+  });
+}
+
+// ============================================
+// LIST VIEW
+// ============================================
+function renderListView(activities) {
+  const el = document.getElementById('list-view');
+  if (!activities.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔍</p><p style="font-weight:600">No activities found</p><p style="font-size:13px;margin-top:4px">Try changing your filters or search</p></div>';
+    return;
+  }
+
+  el.innerHTML = activities.map(a => {
+    const cat = getCategoryInfo(a.category_id);
+    const langClass = a.lang === 'en_pl' ? 'en-pl' : a.lang;
+    const langLabel = a.lang === 'en' ? '🇬🇧 EN' : a.lang === 'pl' ? '🇵🇱 PL' : '🇬🇧🇵🇱';
+    const date = new Date(a.starts_at);
+    const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const price = a.price_cents ? `${(a.price_cents/100).toFixed(0)} PLN` : 'Free';
+    const freq = a.frequency === 'one_time' ? '' : `· ${a.frequency}`;
+
+    return `<div class="list-card" onclick='openDetailById("${a.id}")'>
+      <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
+      <div class="list-card-info">
+        <h3>${a.title}</h3>
+        <div class="list-meta">
+          <span>📅 ${dateStr} ${timeStr}</span>
+          <span>📍 ${a.location_name || ''}</span>
+          <span>👥 ${a.participants || 0}${a.max_participants ? '/'+a.max_participants : ''}</span>
+          <span>${price} ${freq}</span>
+        </div>
+      </div>
+      <div class="lang-tag ${langClass}">${langLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================
+// CATEGORIES BAR
+// ============================================
+function renderCategories() {
+  const bar = document.getElementById('category-bar');
+  bar.innerHTML = `<div class="cat-pill active" data-cat="all" onclick="filterCategory(null, this)">All</div>` +
+    state.categories.map(c =>
+      `<div class="cat-pill" data-cat="${c.id}" onclick="filterCategory('${c.id}', this)">${c.icon} ${c.name}</div>`
+    ).join('');
+}
+
+function filterCategory(catId, el) {
+  state.filters.category = catId;
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderActivities();
+}
+
+// ============================================
+// SEARCH
+// ============================================
+function handleSearch() {
+  state.filters.search = document.getElementById('search-input').value;
+  renderActivities();
+}
+
+// ============================================
+// FILTERS
+// ============================================
+function setLangFilter(val) {
+  state.filters.lang = val;
+  document.querySelectorAll('[data-lang]').forEach(c => c.classList.toggle('active', c.dataset.lang === val));
+}
+function setTimeFilter(val) {
+  state.filters.time = val;
+  document.querySelectorAll('[data-time]').forEach(c => c.classList.toggle('active', c.dataset.time === val));
+}
+function setTypeFilter(val) {
+  state.filters.type = val;
+  document.querySelectorAll('[data-type]').forEach(c => c.classList.toggle('active', c.dataset.type === val));
+}
+
+function applyFilters() {
+  closeAllPanels();
+  renderActivities();
+}
+
+// ============================================
+// VIEWS
+// ============================================
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+
+  const listEl = document.getElementById('list-view');
+  if (view === 'list' || view === 'saved') {
+    listEl.classList.remove('hidden');
+    if (view === 'saved') renderSavedView();
+    else renderActivities();
+  } else {
+    listEl.classList.add('hidden');
+    if (state.map) state.map.invalidateSize();
+  }
+}
+
+function renderSavedView() {
+  // In demo mode, show placeholder
+  const el = document.getElementById('list-view');
+  el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔖</p><p style="font-weight:600">No saved activities yet</p><p style="font-size:13px;margin-top:4px">Tap the bookmark icon on any activity to save it</p></div>';
+}
+
+// ============================================
+// PANELS
+// ============================================
+function openPanel(id) {
+  document.getElementById('panel-overlay').classList.add('visible');
+  document.getElementById(id).classList.add('visible');
+}
+function closeAllPanels() {
+  document.getElementById('panel-overlay').classList.remove('visible');
+  document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('visible'));
+}
+
+// ============================================
+// DETAIL VIEW
+// ============================================
+function openDetailById(id) {
+  const activity = state.activities.find(a => a.id === id);
+  if (activity) openDetail(activity);
+}
+
+function openDetail(activity) {
+  const cat = getCategoryInfo(activity.category_id);
+  const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
+  const langLabel = activity.lang === 'en' ? '🇬🇧 English' : activity.lang === 'pl' ? '🇵🇱 Polish' : '🇬🇧🇵🇱 EN & PL';
+  const date = new Date(activity.starts_at);
+  const dateStr = date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : 'Free';
+  const freqLabel = { one_time: 'One-time', weekly: 'Every week', biweekly: 'Every 2 weeks', monthly: 'Monthly', daily: 'Daily' };
+  const hostInitial = (activity.host_name || 'A')[0].toUpperCase();
+  const isFull = activity.max_participants && activity.participants >= activity.max_participants;
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-hero" style="background:linear-gradient(135deg, ${cat.color}, ${cat.color}dd)">
+      <span style="font-size:64px">${cat.icon}</span>
+      <div class="detail-lang-badge ${langClass}">${langLabel}</div>
+    </div>
+    <div class="detail-info">
+      <h1>${activity.title}</h1>
+      <div class="detail-meta">
+        <div class="meta-item">📅 ${dateStr}</div>
+        <div class="meta-item">🕐 ${timeStr}</div>
+        <div class="meta-item">📍 ${activity.location_name || 'TBA'}</div>
+        ${activity.address ? `<div class="meta-item">🗺️ ${activity.address}</div>` : ''}
+        <div class="meta-item">🔄 ${freqLabel[activity.frequency] || activity.frequency}</div>
+        <div class="meta-item">💰 ${price}</div>
+      </div>
+      <p class="detail-description">${activity.description || ''}</p>
+      <div class="detail-host">
+        <div class="detail-host-avatar">${hostInitial}</div>
+        <div>
+          <div class="detail-host-name">${activity.host_name || 'Anonymous'}</div>
+          <div class="detail-host-label">Host${activity.source !== 'user' ? ' · via ' + activity.source.replace('scraped_','') : ''}</div>
+        </div>
+      </div>
+      <div class="detail-participants">
+        <span class="count">${activity.participants || 0}</span>${activity.max_participants ? ' / ' + activity.max_participants : ''} participants
+        ${isFull ? '<span style="color:var(--danger);font-weight:600"> — Full</span>' : ''}
+      </div>
+      <div class="detail-actions">
+        <button class="btn ${isFull ? 'btn-secondary' : 'btn-primary'} btn-full" onclick="joinActivity('${activity.id}')" ${isFull ? 'disabled' : ''}>
+          ${isFull ? 'Full — Join Waitlist' : '✋ Join Activity'}
+        </button>
+        <button class="btn btn-secondary" onclick="saveActivity('${activity.id}')" style="padding:12px 16px" title="Save">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+  openPanel('detail-panel');
+}
+
+async function joinActivity(activityId) {
+  if (!state.user) {
+    toast('Sign up to join activities!');
+    closeAllPanels();
+    showAuth();
+    return;
+  }
+
+  if (state.demoMode) {
+    const a = state.activities.find(x => x.id === activityId);
+    if (a) a.participants = (a.participants || 0) + 1;
+    toast('You joined! See you there 🎉');
+    closeAllPanels();
+    renderActivities();
+    return;
+  }
+
+  try {
+    const { error } = await sb.from('participants').insert({
+      activity_id: activityId,
+      user_id: state.user.id
+    });
+    if (error) throw error;
+    await loadActivities();
+    toast('You joined! See you there 🎉');
+    closeAllPanels();
+    renderActivities();
+  } catch (err) {
+    if (err.message?.includes('duplicate')) {
+      toast('You already joined this activity');
+    } else {
+      toast('Error: ' + err.message);
+    }
+  }
+}
+
+function saveActivity(activityId) {
+  toast('Activity saved! 🔖');
+}
+
+// ============================================
+// CREATE ACTIVITY
+// ============================================
+function populateCreateForm() {
+  const sel = document.getElementById('create-category');
+  sel.innerHTML = state.categories.map(c =>
+    `<option value="${c.id}">${c.icon} ${c.name}</option>`
+  ).join('');
+
+  // Default date = tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('create-date').value = tomorrow.toISOString().split('T')[0];
+}
+
+function openCreateActivity() {
+  if (!state.user) {
+    toast('Sign up to host activities!');
+    showAuth();
+    return;
+  }
+  openPanel('create-panel');
+}
+
+async function submitActivity() {
+  const title = document.getElementById('create-title').value.trim();
+  const desc = document.getElementById('create-desc').value.trim();
+  const categoryId = document.getElementById('create-category').value;
+  const lang = document.getElementById('create-lang').value;
+  const locationName = document.getElementById('create-location').value.trim();
+  const address = document.getElementById('create-address').value.trim();
+  const date = document.getElementById('create-date').value;
+  const time = document.getElementById('create-time').value;
+  const frequency = document.getElementById('create-frequency').value;
+  const maxP = document.getElementById('create-max').value;
+
+  if (!title || !locationName || !date || !time) {
+    toast('Please fill in all required fields');
+    return;
+  }
+
+  // Freemium check
+  if (frequency !== 'one_time' && state.profile && !state.profile.is_premium) {
+    toast('⭐ Premium required for recurring events');
+    return;
+  }
+
+  const startsAt = new Date(`${date}T${time}:00`).toISOString();
+
+  if (state.demoMode) {
+    const cat = getCategoryInfo(categoryId);
+    // Place near city center with slight offset
+    const newActivity = {
+      id: 'new-' + Date.now(),
+      title,
+      description: desc,
+      category_id: categoryId,
+      city_id: state.currentCity.id,
+      host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
+      host_id: state.user?.id,
+      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
+      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
+      location_name: locationName,
+      address,
+      starts_at: startsAt,
+      frequency,
+      lang,
+      participants: 1,
+      max_participants: maxP ? parseInt(maxP) : null,
+      source: 'user',
+      status: 'active'
+    };
+    state.activities.push(newActivity);
+    closeAllPanels();
+    renderActivities();
+    toast('Activity created! 🎉');
+    // Clear form
+    document.getElementById('create-title').value = '';
+    document.getElementById('create-desc').value = '';
+    document.getElementById('create-location').value = '';
+    document.getElementById('create-address').value = '';
+    return;
+  }
+
+  try {
+    const { error } = await sb.from('activities').insert({
+      title,
+      description: desc || null,
+      category_id: categoryId,
+      city_id: state.currentCity.id,
+      host_id: state.user.id,
+      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
+      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
+      location_name: locationName,
+      address: address || null,
+      starts_at: startsAt,
+      frequency,
+      lang,
+      max_participants: maxP ? parseInt(maxP) : null,
+      source: 'user'
+    });
+    if (error) throw error;
+    await loadActivities();
+    closeAllPanels();
+    renderActivities();
+    toast('Activity created! 🎉');
+  } catch (err) {
+    if (err.message?.includes('Premium')) {
+      toast('⭐ Premium required for recurring events');
+    } else {
+      toast('Error: ' + err.message);
+    }
+  }
+}
+
+// ============================================
+// CITY PICKER
+// ============================================
+function openCityPicker() {
+  const el = document.getElementById('city-list');
+  const cityIcons = { 'Warsaw': '🏙️', 'Kraków': '🏰' };
+  const cityDescs = { 'Warsaw': 'Capital city · 1.8M population', 'Kraków': 'Cultural capital · 800K population' };
+
+  el.innerHTML = state.cities.map(c => `
+    <div class="city-option ${c.id === state.currentCity.id ? 'active' : ''}" onclick="selectCity('${c.id}')">
+      <div class="city-icon">${cityIcons[c.name] || '🌍'}</div>
+      <div>
+        <div class="city-name">${c.name}</div>
+        <div class="city-desc">${cityDescs[c.name] || c.country}</div>
+      </div>
+    </div>
+  `).join('');
+
+  openPanel('city-panel');
+}
+
+async function selectCity(cityId) {
+  const city = state.cities.find(c => c.id === cityId);
+  if (!city) return;
+
+  state.currentCity = city;
+  document.getElementById('current-city-name').textContent = city.name;
+  closeAllPanels();
+
+  if (!state.demoMode) {
+    await loadActivities();
+  }
+
+  state.map.flyTo([city.lat, city.lng], city.zoom_level || 13, { duration: 1.5 });
+  renderActivities();
+  toast(`Switched to ${city.name}`);
+}
+
+// ============================================
+// FILTERS PANEL
+// ============================================
+function openFilters() {
+  openPanel('filter-panel');
+}
+
+// ============================================
+// PROFILE PANEL
+// ============================================
+function openProfile() {
+  const el = document.getElementById('profile-content');
+
+  if (!state.user) {
+    el.innerHTML = `
+      <div class="panel-header">
+        <h2>Profile</h2>
+        <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+      </div>
+      <div class="panel-body" style="text-align:center;padding-top:40px;">
+        <p style="font-size:48px;margin-bottom:16px">👤</p>
+        <p style="font-weight:600;margin-bottom:8px">You're browsing as a guest</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Sign up to host and join activities</p>
+        <button class="btn btn-primary btn-full" onclick="closeAllPanels();showAuth();">Sign Up / Log In</button>
+      </div>
+    `;
+  } else {
+    const name = state.profile?.display_name || state.user.email?.split('@')[0] || 'User';
+    const initial = name[0].toUpperCase();
+    const isPremium = state.profile?.is_premium;
+
+    el.innerHTML = `
+      <div class="panel-header">
+        <h2>Profile</h2>
+        <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="profile-header">
+          <div class="profile-avatar">${initial}</div>
+          <div class="profile-name">${name} ${isPremium ? '<span class="premium-badge">⭐ Premium</span>' : ''}</div>
+          <div class="profile-email">${state.user.email || ''}</div>
+        </div>
+        <div class="profile-menu-item" onclick="toast('Edit profile coming soon!')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Edit Profile
+        </div>
+        <div class="profile-menu-item" onclick="toast('Your hosted activities coming soon!')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          My Activities
+        </div>
+        ${!isPremium ? `
+        <div class="profile-menu-item" onclick="toast('Premium upgrade coming soon!')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>Upgrade to Premium</span>
+          <span class="premium-badge" style="margin-left:auto">⭐ PRO</span>
+        </div>` : ''}
+        <div class="profile-menu-item" onclick="handleLogout()" style="color:var(--danger)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log Out
+        </div>
+      </div>
+    `;
+  }
+  openPanel('profile-panel');
+}
+
+async function handleLogout() {
+  if (!state.demoMode && sb) {
+    await sb.auth.signOut();
+  }
+  state.user = null;
+  state.profile = null;
+  closeAllPanels();
+  toast('Logged out');
+  // Reset to demo mode
+  state.demoMode = true;
+  state.activities = DEMO_ACTIVITIES;
+  updateUserButton();
+  renderActivities();
+}
+
+// ============================================
+// TOAST
+// ============================================
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+// ============================================
+// SERVICE WORKER
+// ============================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[SW] Registered:', reg.scope))
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  });
+}
+
+// ============================================
+// PWA INSTALL PROMPT
+// ============================================
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install hint after 30 seconds of use
+  setTimeout(() => {
+    if (deferredPrompt) {
+      toast('Tip: Add Gather to your home screen for the best experience!');
+    }
+  }, 30000);
+});
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

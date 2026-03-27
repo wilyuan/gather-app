@@ -1142,14 +1142,27 @@ html, body {
 const SUPABASE_URL = 'https://whuqnhcmzorvapjfedka.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXFuaGNtem9ydmFwamZlZGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDEyMzcsImV4cCI6MjA5MDExNzIzN30.VoxjWD05nSA7EpH7l36lr-rbOV2DB13N2rp-_CeMtVM';
 
-// Initialize Supabase client
+// Initialize Supabase client (may be null if CDN hasn't loaded yet)
 let sb = null;
-try {
-  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase && window.supabase.createClient) {
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+function tryInitSupabase() {
+  if (sb) return sb;
+  try {
+    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase && window.supabase.createClient) {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log('[Gather] Supabase client initialized');
+    }
+  } catch(e) {
+    console.warn('Supabase init failed:', e);
   }
-} catch(e) {
-  console.warn('Supabase not configured, running in demo mode');
+  return sb;
+}
+// Try immediately
+tryInitSupabase();
+
+// Dynamic check — never rely on a stale flag
+function isDemo() {
+  tryInitSupabase();
+  return !sb;
 }
 
 // ============================================
@@ -1166,7 +1179,7 @@ const state = {
   filters: { category: null, lang: 'all', time: 'all', type: 'all', date: null, search: '' },
   currentView: 'map',
   authMode: 'signup', // 'signup' or 'login'
-  demoMode: !sb,
+  demoMode: !sb, // legacy — use isDemo() instead
   appLang: localStorage.getItem('gather-lang') || 'en',
   map: null,
   markerLayer: null
@@ -1577,16 +1590,17 @@ async function init() {
   state.currentCity = DEMO_CITIES[1]; // Kraków — launch city
   state.activities = DEMO_ACTIVITIES;
 
-  if (!state.demoMode) {
+  // Try Supabase — even if it wasn't ready at script parse time
+  tryInitSupabase();
+
+  if (sb) {
     // Try loading from Supabase — overlay on top of demo data
     try {
       const [citiesResult, catsResult] = await Promise.all([loadCities(), loadCategories()]);
       if (state.cities.length && !state.cities.some(c => c.id === 'krakow')) {
-        // Got real cities from DB — use those
         state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
       }
       await loadActivities();
-      // If DB returned activities, use them; otherwise keep demo data
       if (!state.activities.length) {
         state.activities = DEMO_ACTIVITIES;
       }
@@ -1609,10 +1623,10 @@ async function init() {
     sb.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         state.user = session.user;
+        state.demoMode = false;
         await loadProfile();
         updateUserButton();
         renderActivities();
-        // Clean up OAuth hash from URL
         if (window.location.hash.includes('access_token')) {
           history.replaceState(null, '', window.location.pathname);
         }
@@ -1624,6 +1638,39 @@ async function init() {
         renderActivities();
       }
     });
+  } else {
+    // Supabase CDN might still be loading — retry once after a short delay
+    setTimeout(() => {
+      tryInitSupabase();
+      if (sb) {
+        console.log('[Gather] Late Supabase init — setting up auth listener');
+        state.demoMode = false;
+        sb.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            state.user = session.user;
+            loadProfile().then(() => { updateUserButton(); renderActivities(); });
+          }
+        }).catch(() => {});
+        sb.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            state.user = session.user;
+            state.demoMode = false;
+            await loadProfile();
+            updateUserButton();
+            renderActivities();
+            if (window.location.hash.includes('access_token')) {
+              history.replaceState(null, '', window.location.pathname);
+            }
+            toast(t('welcomeBack'));
+          } else if (event === 'SIGNED_OUT') {
+            state.user = null;
+            state.profile = null;
+            updateUserButton();
+            renderActivities();
+          }
+        });
+      }
+    }, 1500);
   }
 
   showApp();
@@ -1685,7 +1732,7 @@ async function handleAuth() {
     return;
   }
 
-  if (state.demoMode) {
+  if (isDemo()) {
     state.user = { id: 'demo-user', email, user_metadata: { display_name: name || email.split('@')[0] } };
     state.profile = { id: 'demo-user', display_name: name || email.split('@')[0], is_premium: false };
     closeAllPanels();
@@ -1730,8 +1777,8 @@ function skipAuth() {
 
 // Social login (Google, Apple)
 async function socialLogin(provider) {
-  if (state.demoMode) {
-    toast(`${provider} login requires Supabase connection`);
+  if (isDemo()) {
+    toast(t('offlineMode') || 'Connection unavailable — please check your internet and try again');
     return;
   }
 
@@ -2169,27 +2216,35 @@ async function joinActivity(activityId) {
 
   const activity = state.activities.find(x => x.id === activityId);
 
-  if (state.demoMode) {
-    if (activity) activity.participants = (activity.participants || 0) + 1;
-    showJoinConfirmation(activity);
-    return;
-  }
-
-  try {
-    const { error } = await sb.from('participants').insert({
-      activity_id: activityId,
-      user_id: state.user.id
-    });
-    if (error) throw error;
-    await loadActivities();
-    showJoinConfirmation(activity);
-  } catch (err) {
-    if (err.message?.includes('duplicate')) {
-      toast(t('alreadyJoined'));
-    } else {
-      toast('Error: ' + err.message);
+  // If Supabase is available, try to persist to DB
+  if (!isDemo()) {
+    try {
+      const { error } = await sb.from('participants').insert({
+        activity_id: activityId,
+        user_id: state.user.id
+      });
+      if (error) {
+        // Table might not exist yet or RLS issue — fall back to local join
+        if (error.message?.includes('duplicate') || error.code === '23505') {
+          toast(t('alreadyJoined') || 'You already joined this activity!');
+          return;
+        }
+        console.warn('Supabase join failed, using local join:', error.message);
+      } else {
+        // DB join succeeded — reload from server
+        await loadActivities();
+        const updatedActivity = state.activities.find(x => x.id === activityId) || activity;
+        showJoinConfirmation(updatedActivity);
+        return;
+      }
+    } catch (err) {
+      console.warn('Join DB error, falling back to local:', err);
     }
   }
+
+  // Local join (demo mode or DB fallback)
+  if (activity) activity.participants = (activity.participants || 0) + 1;
+  showJoinConfirmation(activity);
 }
 
 function showJoinConfirmation(activity) {
@@ -2337,7 +2392,7 @@ async function submitActivity() {
 
   const startsAt = new Date(`${date}T${time}:00`).toISOString();
 
-  if (state.demoMode) {
+  if (isDemo()) {
     const cat = getCategoryInfo(categoryId);
     // Place near city center with slight offset
     const newActivity = {
@@ -2446,7 +2501,7 @@ async function selectCity(cityId) {
   document.getElementById('current-city-name').textContent = city.name;
   closeAllPanels();
 
-  if (!state.demoMode) {
+  if (!isDemo()) {
     await loadActivities();
   }
 
@@ -2589,7 +2644,7 @@ function openProfile() {
 }
 
 async function handleLogout() {
-  if (!state.demoMode && sb) {
+  if (!isDemo() && sb) {
     await sb.auth.signOut();
   }
   state.user = null;
