@@ -1,7 +1,7 @@
 // Gather — Service Worker
 // Enables offline support, caching, and PWA installability
 
-const CACHE_NAME = 'gather-v10';
+const CACHE_NAME = 'gather-v12';
 const OFFLINE_URL = 'offline.html';
 
 // Assets to pre-cache on install

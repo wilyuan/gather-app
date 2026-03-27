@@ -1238,6 +1238,8 @@ const TRANSLATIONS = {
     signUpToHost: 'Sign up to host and join activities',
     signUpLogIn: 'Sign Up / Log In',
     editProfile: 'Edit Profile', myActivities: 'My Activities',
+    sendFeedback: 'Send Feedback', feedbackPlaceholder: 'Tell us what you think, report a bug, or suggest a feature...',
+    feedbackSent: 'Thanks for your feedback!',
     upgradePremium: 'Upgrade to Premium', logOut: 'Log Out',
     appLanguage: 'App Language',
     // Create
@@ -1352,6 +1354,8 @@ const TRANSLATIONS = {
     signUpToHost: 'Zarejestruj się, aby organizować i dołączać do aktywności',
     signUpLogIn: 'Rejestracja / Logowanie',
     editProfile: 'Edytuj profil', myActivities: 'Moje aktywności',
+    sendFeedback: 'Wyślij opinię', feedbackPlaceholder: 'Powiedz co myślisz, zgłoś błąd lub zasugeruj funkcję...',
+    feedbackSent: 'Dziękujemy za opinię!',
     upgradePremium: 'Ulepsz do Premium', logOut: 'Wyloguj się',
     appLanguage: 'Język aplikacji',
     hostActivity: 'Organizuj aktywność', activityTitle: 'Tytuł aktywności',
@@ -1678,6 +1682,124 @@ const DEMO_ACTIVITIES = [
   { id:'pz19', title:'Photography Workshop — Portrait Studio', description:'Learn studio portrait photography. Lighting setup, posing, editing. All skill levels. Certificates included!', category_id:'photo', city_id:'poznan', host_name:'FotoPozan Studio', lat:52.4100, lng:16.9550, location_name:'Śródka Photography Studio', address:'ul. Stawna 18', starts_at:'2026-04-11T15:00:00', frequency:'one_time', lang:'en_pl', participants:10, max_participants:14, price_cents:8500, source:'scraped_google', source_url:'https://www.fotopozanstudio.pl/' },
   { id:'pz20', title:'Community Cleanup — Old Brewery', description:'Help restore historic Old Brewery area. Beautification project. Tools provided. Refreshments after!', category_id:'volunteer', city_id:'poznan', host_name:'CleanPozan', lat:52.4000, lng:16.9270, location_name:'Stary Browar Area', address:'ul. Garbary 42', starts_at:'2026-04-19T10:00:00', frequency:'one_time', lang:'pl', participants:35, max_participants:70, source:'user', source_url:'https://www.facebook.com/CleanPozan' }
 ];
+
+const DEMO_TRANSLATIONS_PL = {
+  'w1': { title: 'Sobotni parkrun', description: 'Darmowy bieg na 5 km w parku Pole Mokotowskie. Wszystkie tempa mile widziane. Zbiórka przy głównej fontannie.' },
+  'w2': { title: 'Wieczór gier planszowych @ Planszówkowa', description: 'Wieczór gier planszowych - dostępne są 200+ gier. Rozpoczynający mile widziani. Piwo i przekąski w barze. Nie trzeba rezerwować.' },
+  'w3': { title: 'Wymiana języków dla obcokrajowców — EN/PL', description: 'Ćwicz polski lub angielski z rodzimymi użytkownikami. 10-minutowe rozmowy, potem zmiana partnera.' },
+  'w4': { title: 'Wieczór taneczny Bachata', description: 'Taniec towarzyski dla wszystkich poziomów. Lekcja dla początkujących o 20:00, potem wolna dancefloor do północy.' },
+  'w5': { title: 'Magic: The Gathering — Friday Night', description: 'Casual wieczór Magic: The Gathering. Formaty Standard i Commander. Wstęp 15 PLN zawiera 1 booster.' },
+  'w6': { title: 'Joga Ashtanga w parku Łazienki', description: 'Darmowa joga na świeżym powietrzu w sobotnie poranki. Praktykujemy Serię Podstawową. Wszystkie poziomy. Przynieś matę.' },
+  'w7': { title: 'Siatkówka plażowa @ Praga Beach', description: 'Rekreacyjna siatkówka 4v4 na plaży nad Wisłą. Mieszane poziomy. Organizujemy drużyny na miejscu.' },
+  'w8': { title: 'Otwarta sesja jam session — Jazz & Blues', description: 'Przynieś swój instrument i graj razem z nami! Sekcja rytmiczna zapewniamy. Śpiewacy zaproszeni. Bez wstępu.' },
+  'w9': { title: 'Boulder session dla początkujących', description: 'Wspinaczka na boulderze dla początkujących i średniozaawansowanych. Wynajem butów wliczony. Pomagamy sobie nawzajem!' },
+  'w10': { title: 'Liga Pokémon TCG', description: 'Cotygodniowa liga Pokémon TCG. Format standardowy, gra otwarta i mini-turnieje. Nagrody dla czołowych 4.' },
+  'w11': { title: 'Piłka nożna 5v5 — Niedziele', description: 'Casual piłka nożna 5v5 w centrum sportowym Torwar. Wszystkie płci i poziomy. 10 PLN za osobę.' },
+  'w12': { title: 'Workshop Salsa Rueda', description: 'Ucz się kubańskiego stylu salsy grupowej! Początkujący o 19:00, średniozaawansowani o 20:00. Nie potrzebujesz partnera.' },
+  'w13': { title: 'Medytacja i kąpiel dźwiękowa', description: 'Medytacja prowadzona w towarzystwie kąpieli dźwiękowej z kryształowych mis śpiewających. Doskonałe na stres. Maty zapewniamy.' },
+  'w14': { title: 'Wycieczka po street art', description: 'Odkryj scenę street artu w Warszawie. Poznaj historie artystów, techniki i ukryte murale. 2-godzinna spacer.' },
+  'w15': { title: 'Zajęcia jogi Hatha', description: 'Tradycyjne przepływy hathy dla wszystkich poziomów. Poprawa elastyczności i siły w przyjaznym środowisku.' },
+  'w16': { title: 'Networking Tech & Startups', description: 'Miesięczne networking dla profesjonalistów tech. Wykłady, demo i casual networking z rosnącą społecznością.' },
+  'w17': { title: 'Fotospacer Photography Club', description: 'Miesięczne fotospacery badające różne dzielnice Warszawy. Ucz się kompozycji, oświetlenia i opowiadania historii.' },
+  'w18': { title: 'Wieczory D&D Gry Planszowe', description: 'Kampanie Dungeons & Dragons w inkluzywnym środowisku. Wszystkie poziomy doświadczenia. Przekąski zapewniamy.' },
+  'w19': { title: 'Nocna wycieczka rowerowa — Znaki neonowe', description: 'Odkryj znaki neonowe Warszawy na nocnej jeździe rowerem. Światła i kaski zapewniamy. 15 km łatwa ścieżka.' },
+  'w20': { title: 'Conversation Club — Kawa i rozmowa', description: 'Casual rozmowa dla osób uczących się angielskiego. Ćwicz mówienie w zrelaksowanym towarzystwie rodzimych użytkowników.' },
+  'w21': { title: 'Kayaking nad Wisłą o zachodzie słońca', description: '2-godzinny wiosłowanie na Wiśle w złotej godzinie. Sprzęt zapewniamy. Żadne doświadczenie nie wymagane.' },
+  'w22': { title: 'Urban Sketching Walk — Dzielnica Praga', description: 'Szkicuj kolorowe murale i architekturę przedwojenną. Farby akwarelowe i ołówki dostępne. Wszystkie poziomy umiejętności.' },
+  'w23': { title: 'Pierogi i warsztaty kuchni polskiej', description: 'Nauczyć się robić pierogi ruskie od podstaw. Wszystkie składniki zapewniamy. Zabierz do domu to, co gotujesz!' },
+  'w24': { title: 'Klub książki — Czytelnicy angielskojęzyczni', description: 'Miesięczny klub książki dla czytelników angielskojęzycznych. Dyskusja + wino. Tego miesiąca: "Tomorrow, and Tomorrow" Zevina.' },
+  'w25': { title: 'Workshop ceramiki — Zrób swój kubek', description: 'Rzeźbi własny ceramiczny kubek. Wszystkie materiały i wypalanie w piecu wliczone. Забierz za 2 tygodnie.' },
+  'w26': { title: 'Warsztaty robienia sushi', description: 'Nauczyć się nigiri, maki i uramaki od japońskiego szefa. Wszystkie składniki i sprzęt zapewniamy. BYOB!' },
+  'w27': { title: 'Cleanup Crew — Dzielnica Kamionek', description: 'Miesięczna sprzątanie sąsiedztwa. Rękawiczki i torby zapewniamy. Kawa i ciasteczka później. Dołącz!' },
+  'w28': { title: 'D&D One-Shot — Przygoda w tawernie', description: 'Jednosesyjna przygoda D&D. Postaci premade dostępne. Nowi gracze bardzo zaproszeni! Przekąski zapewniamy.' },
+  'w29': { title: 'Podstawy akwareli krajobrazowej', description: 'Nauczyć się technik akwareli krajobrazowej w popołudniowym warsztacie. Materiały zapewniamy. Zabierz swoje obrazy.' },
+  'w30': { title: 'Ochotnicze sadzenie drzew — Brzegi Wisły', description: 'Pomóż przywrócić zieleń brzegom Wisły. Posadź rodzime drzewa, narzędzia zapewniamy. Świetne działanie wspólnotowe!' },
+  'k1': { title: 'Kraków Hash House Harriers', description: 'Społeczny bieg/spacer 5-8 km przez Kraków. Wizyta w pubie potem. Turyści i obcokrajowcy bardzo zaproszeni. Wszystkie tempa!' },
+  'k2': { title: 'Wieczór gier planszowych w Cybermachinie', description: 'Otwarty wieczór gier planszowych w Cybermachinie. 500+ dostępnych gier. Jedzenie i rzemieślnicze piwo. Nie trzeba rezerwować.' },
+  'k3': { title: 'Polski konwersacyjny dla obcokrajowców', description: 'Przyjazna praktyka polskiego dla osób mówiących nierodzimych, poziom A1-B1. Rodzimi użytkownicy jako wolontariusze. Bezpłatnie!' },
+  'k4': { title: 'Salsa i Bachata Social — Kazimierz', description: 'Wieczór tańca łacińskiego w Kazimierzu. Pokój Bachaty + pokój Salsy. Mini-lekcja o 20:00. Wszystkie poziomy!' },
+  'k5': { title: 'Warhammer 40K — Open Play', description: 'Przynieś armię do gry casual. Stoły i teren zapewniamy. Stanowisko malarskie dostępne. Demo gry dla nowych graczy.' },
+  'k6': { title: 'Joga poranna na polach Błoń', description: 'Bezpłatna joga na świeżym powietrzu co sobotę. Przepływ Vinyasy dla wszystkich poziomów. Przynieś matę, wodę i dobrą energię.' },
+  'k7': { title: 'Piłka nożna 5v5 — Wtorki', description: 'Cotygodniowa piłka nożna pod halogenami na boisku treningowym Wisły. Mieszane umiejętności. Świetna atmosfera. 15 PLN.' },
+  'k8': { title: 'Live Jazz Jam — Alchemia', description: 'Otwarta jam session na legendarnym Alchemii w Kazimierzu. Przynieś instrument. Sekcja rytmiczna zapewniamy. Bez wstępu.' },
+  'k9': { title: 'Bouldering @ CityBoulder', description: 'Sesja wspinaczki boulder przyjazna dla początkujących. Wynajem butów dostępny. Wspieramy się nawzajem! Wstęp 25 PLN.' },
+  'k10': { title: 'Medytacja świadomości — Kazimierz', description: '45 minut medytacji prowadzonej + herbata i dyskusja. Wszystkie tradycje mile widziane. Na zasadzie dobrowolnych wpłat.' },
+  'k11': { title: 'Koło songwriterów', description: 'Dziel się oryginalnymi utworami lub niedokończonymi pracami. Wspierające koło. Tylko instrumenty akustyczne. Wszystkie gatunki.' },
+  'k12': { title: 'Klub fotograficzny — Fokus na architekturę', description: 'Odkryj architekturę Krakowa z aparatem. Ucz się kompozycji, oświetlenia i opowiadania historii w pięknych lokacjach.' },
+  'k13': { title: 'Lindy Hop Social Dance', description: 'Swing dance social w Starym Mieście. Klasa pokazowa 19:30, otwarta dancefloor 20:00-23:00. Nie potrzebujesz partnera.' },
+  'k14': { title: 'Sprzątanie Parku Plantów', description: 'Miesięczne sprzątanie pierścienia parku Planty. Przynieś wielokrotnego użytku rękawiczki. Torby i patrole zapewniamy. Działanie wspólnotowe!' },
+  'k15': { title: 'Kraków Tech Meetup — Fokus na Web Dev', description: 'Miesięczne tech meetup dla web developerów. Krótkie rozmowy, demo i networking. Darmowe piwo od sponsorów!' },
+  'k16': { title: 'Rozmowa polska', description: 'Ćwicz polski w przyjaznym środowisku. Wszystkie poziomy zaproszeni. Kawa i przekąski. Rodzimi użytkownicy pomagają!' },
+  'k17': { title: 'Malarstwo Plein Air — Niedziele', description: 'Maluj krakowskie krajobrazy z natury. Olej, akryl, akwarela wszystkie mile widziane. Bezpłatna krytyka grupy potem.' },
+  'k18': { title: 'Wyzwania Escape Room Team', description: 'Miesięczne wyzwanie escape room z tym samym zespołem. Testuj swoje puzzle i pracę zespołową. Wstęp zawiera grę.' },
+  'k19': { title: 'Fotospacery — Obiekty UNESCO', description: 'Odkryj krakowskie obiekty UNESCO z aparatem. Porady o kompozycji, świetle i opowiadaniu. Wszystkie poziomy mile widziane.' },
+  'k20': { title: 'Meetup entuzjastów Crypto', description: 'Miesięczna dyskusja blockchain tech. DeFi, NFT i Web3. Rozmowy, demo i networking z entuzjastami.' },
+  'k21': { title: 'Wycieczka piesza Zakopane — Morskie Oko', description: 'Prowadzona wycieczka do jeziora Morskie Oko w Tatrach. Transport z Krakowa wliczony. 6-godzinna wycieczka średniozaawansowana.' },
+  'k22': { title: 'Mistrz kuchni pierogów polskich', description: 'Gotuj autentyczne pierogi od podstaw. Spróbuj 3 nadzienia: ruskie, mushroom i słodkie. Zjedz to, co gotujesz!' },
+  'k23': { title: 'Klubu książki angielskiej — Kazimierz', description: 'Miesięczna dyskusja klubu książki + wino w Massolicie. Ten miesiąc: "Intermezzo" Sally Rooney.' },
+  'k24': { title: 'Nowa Huta Photo Safari', description: 'Odkryj architekturę socrealistyczną. Ucz się kompozycji, światła i opowiadania przez soczewkę aparatu.' },
+  'k25': { title: 'Catan Championship — Kraków Edition', description: 'Turniej Osadników Catanu! 4 rundy swissowskie. Czołowe 4 wygrywają kredyt sklepowy. Wstęp zawiera napój.' },
+  'k26': { title: 'Kayaking na Wiśle — Kraków do Tyńca', description: '12 km malowniczy spacer na kajaku do opactwa benedyktynów. Sprzęt i transport powrotny wliczony. 3-4 godziny. Pięknie!' },
+  'k27': { title: 'Wieczór sushi i sake', description: 'Rób sushi rolls i sashimi, łącz z degustacją sake. Funnactive dla 8 osób. Wszystko zawarte.' },
+  'k28': { title: 'Workshop akwareli — Kwiaty', description: 'Maluj wiosenne kwiaty w akwareli! Materiały zapewniamy. Początkujący do średniozaawansowanych. Zabierz swoją pracę.' },
+  'k29': { title: 'Warsztaty kuchni Delicious Poland', description: 'Nauczyć się tradycyjnych polskich potraw od doświadczonego szefa. Spróbuj nowych przepisów. Zjedz swoje stworzenia!' },
+  'k30': { title: 'Kraków sprzątanie ochotnicze — Planty', description: 'Pomóż przywrócić piękno parku Planty. Posadź drzewa, zbierz śmieci, ciesz się wspólnotą. Narzędzia zapewniamy!' },
+  'wr1': { title: 'Wieczorni biegacze środy', description: 'Casual grupa biegaczy dla wszystkich temp. Pętla wokół Parku Szczytnickiego. Kawa potem! Łatwe biegi 5-7 km.' },
+  'wr2': { title: 'Wieczór gier planszowych Cybermachina', description: 'Dołącz nas na gry planszowe, przekąski i piwo! 100+ dostępnych gier. Początkujący zaproszeni. Nie trzeba rezerwować.' },
+  'wr3': { title: 'Polyglot wymiana języków', description: 'Ćwicz angielski, polski, niemiecki i francuski. 10-minutowe rozmowy z rodzimymi użytkownikami.' },
+  'wr4': { title: 'Joga w parku — Szczytnicki', description: 'Joga na świeżym powietrzu w pięknym otoczeniu parku. Wszystkie poziomy. Przynieś matę. Bezpłatnie! Połączenie z naturą.' },
+  'wr5': { title: 'Wieczory Salsy @ Rynek Club', description: 'Lekcja salsy dla początkujących o 20:00, potem otwarty taniec. Wszystkie poziomy. DJ. Nie potrzebujesz partnera!' },
+  'wr6': { title: 'Tech Startup Meetup', description: 'Miesięczne tech rozmowy, demo i networking. Tematy: startup, kod, design i biznes. Piwo i przekąski!' },
+  'wr7': { title: 'Foodie Tasting — Lokalne smaki', description: 'Miesięczna degustacja jedzenia i łączenie. Lokalni szefowie dzielą się daniami i historiami. BYOB lub kupuj wino na miejscu.' },
+  'wr8': { title: 'Art Studio Open Nights', description: 'Odwiedź pracownie artystów, zobacz żywe malowanie, spotykaj twórców. Spacer przez dzielnicę sztuki Wrocławia. Wstęp bezpłatny!' },
+  'wr9': { title: 'Live Music Sessions — ZET PE TE', description: 'Open mic i jam sesje. Wszystkie gatunki. Zarejestruj się na 2-3 piosenki. Atmosfera wspólnotowa. Bez wstępu!' },
+  'wr10': { title: 'Ściana wspinaczkowa środy', description: 'Boulder i wspinaczka na linie. Wynajem butów wliczony. Doświadczony personel udziela korepetycji. Wszystkie umiejętności zaproszeni!' },
+  'wr11': { title: 'Fotospacery — Wyspa Tumska', description: 'Odkryj obiekty UNESCO z aparatem. Techniki kompozycji i światła. Wszystkie poziomy mile widziane. Piękne światło!' },
+  'wr12': { title: 'Klubu książki czwartek', description: 'Miesięczna dyskusja książki + wino. Ten miesiąc: współczesna fikcja. Spotykaj innych czytelników!' },
+  'wr13': { title: 'Ochotnicze sprzątanie parku', description: 'Utrzymuj nasze parki piękne! Sadzaj drzewa, zbieraj śmieci, ciesz się wspólnotą. Narzędzia i orzeźwienia zapewniamy!' },
+  'wr14': { title: 'Weekend festiwalu jedzenia Wrocławia', description: '3-dniowy festiwal jedzenia z 50+ lokalnymi sprzedawcami. Demo gotowania, degustacje i muzyka na żywo. Przyjazny dla rodzin!' },
+  'wr15': { title: 'Wieczór jazzu — Live Band i koktajle', description: 'Wieczór klasycznego jazzu z zespołem na żywo. Koktajle i małe talerze. Intymne miejsce. Rezerwacja zalecana.' },
+  'wr16': { title: 'Retreat Jogi na świeżym powietrzu — Półdnia', description: '4-godzinny retreat jogi z medytacją. Ćwiczenia oddechowe, praktyka asany i uważność. Przynieś matę!' },
+  'wr17': { title: 'Historyczna wycieczka piesza po mieście', description: 'Poznaj historię Wrocławia na prowadzonej spacerze. Średniowieczne stare miasto, dzielnica żydowska, obiekty WWII. 2 godziny.' },
+  'wr18': { title: 'Mistrzostwo sztuki — Sztuka mieszana', description: 'Ucz się technik sztuki mieszanej od lokalnego artysty. Kolaż, malarstwo i znalezione obiekty. Materiały zapewniamy.' },
+  'wr19': { title: 'Spring Cycling Tour — 30 km', description: 'Malowniczy spacer rowerem przez Wrocław i okolicę. Umiarkowany tempo. Wynajem rowerów dostępny. Zatrzymanie na lunch!' },
+  'wr20': { title: 'Wystawka fotografii — Zdające talenty', description: 'Otwarcie wystawy 20 zdających fotografów. Spotykaj artystów, jasne orzeźwienia, networking event!' },
+  'pz1': { title: 'Poznań Parkrun — Cytadela', description: 'Darmowy bieg na 5 km co sobotę rano. Wszystkie tempa zaproszeni. Przyjazny dla rodzin. Zbiórka przy głównym wejściu parku.' },
+  'pz2': { title: 'Gry planszowe @ Kasztan Cafe', description: 'Przytulna kawa z 150+ grami. Spada w środy wieczory. Przekąski i napoje dostępne. Casual atmosfera!' },
+  'pz3': { title: 'English Conversation Circle', description: 'Ćwicz angielski z rodzimymi użytkownikami. Casual rozmowa przy okrągłym stole. Wszystkie poziomy. Bez ustrukturowanego kursu. Tylko rozmowa!' },
+  'pz4': { title: 'Malta Lake Sports — Running & Cycling', description: 'Outdoor grupa biegaczy i cyklistów. Wybierz swoją dystans. Malowniczy szlak wokół jeziora. Kawa po biegu!' },
+  'pz5': { title: 'Bachata Dancing — Scena Tańca', description: 'Cotygodniowy taniec towarzyski. 30 min lekcja dla początkujących o 19:30, potem otwarta dancefloor. Wszyscy zaproszeni. Nie potrzebujesz partnera!' },
+  'pz6': { title: 'Tech Talks — Web & Dev', description: 'Miesięczne tech meetup. Rozmowy o web dev, designie i startup\'ach. Networking z developerami i designerami.' },
+  'pz7': { title: 'Łączenie jedzenia i wina', description: 'Miesięczna degustacja jedzenia. Lokalna kuchnia łączona z winami. Szef wyjaśnia potrawy. Intymne otoczenie.' },
+  'pz8': { title: 'Street Art Walking Tour', description: 'Odkryj street art Poznania z lokalnym przewodnikiem. Okazje do zdjęć. Poznaj historie artystów. 2 godziny.' },
+  'pz9': { title: 'Live Jazz @ Concordia', description: 'Cotygodniowe występy jazzowe. Lokalni i międzynarodowi muzycy. Koktajle i małe talerze. Żywa atmosfera!' },
+  'pz10': { title: 'Ochotnicze sadzenie drzew', description: 'Pomóż zazieleń Poznań! Posadź rodzime drzewa w Cytadeli. Duch wspólnoty. Narzędzia i orzeźwienia zapewniamy.' },
+  'pz11': { title: 'Joga i medytacja niedziela', description: 'Gentle joga + prowadzona medytacja. Wszystkie poziomy. Na świeżym powietrzu w parku, gdy pogoda pozwala. Przyjazna dla początkujących!' },
+  'pz12': { title: 'Mystery Book Club', description: 'Miesięczny klub książki dla miłośników kryminałów i thrillerów. Dyskusja + wino. Ukryte klejnoty i klasyki!' },
+  'pz13': { title: 'Poznań Food & Culture Festival', description: '3-dniowy festiwal celebrujący lokalne jedzenie i kulturę. Muzyka na żywo, demo gotowania, 60+ sprzedawców. Impreza rodzinna!' },
+  'pz14': { title: 'Historyczna wycieczka po Katedrze', description: 'Prowadzona wycieczka po Katedrze Poznańskiej i wyspie Ostrów Tumski. Historia Kościoła i architektura. 90 minut.' },
+  'pz15': { title: 'Otwarcie wystawy sztuki współczesnej', description: 'Nowa wystawa w galerii lokalnej. Spotykaj kuratora i artystów. Wino i ser. Spacer po galerii z komentarzem.' },
+  'pz16': { title: 'Spring Cycling Tour — 40 km', description: 'Malowniczy spacer rowerem przez region Poznania. Umiarkowany tempo. Zatrzymania w lokalnych atrakcjach. Wynajem roweru wliczony!' },
+  'pz17': { title: 'Jazz Masterclass — Improwizacja', description: 'Ucz się improwizacji jazzowej od doświadczonego muzyka. Interaktywna sesja. Wszystkie poziomy doświadczenia. Przynieś instrument!' },
+  'pz18': { title: 'Wellness Retreat — Joga i spa', description: 'Pełny dzień doświadczenia wellness. Joga rano, masaż i zdrowy lunch. Relaksuj się w obiektach spa.' },
+  'pz19': { title: 'Photography Workshop — Studio portretowe', description: 'Ucz się fotografii portretowej w studio. Setup oświetlenia, pozowanie, edycja. Wszystkie poziomy umiejętności. Certyfikaty wliczone!' },
+  'pz20': { title: 'Community Cleanup — Old Brewery', description: 'Pomóż przywrócić historyczne Stare Browary. Projekt upiększenia. Narzędzia zapewniamy. Orzeźwienia potem!' }
+};
+
+
+// Helper: get translated title/description based on app language
+function actTitle(activity) {
+  if (state.appLang === 'pl' && DEMO_TRANSLATIONS_PL[activity.id]) {
+    return DEMO_TRANSLATIONS_PL[activity.id].title;
+  }
+  return activity.title;
+}
+function actDesc(activity) {
+  if (state.appLang === 'pl' && DEMO_TRANSLATIONS_PL[activity.id]) {
+    return DEMO_TRANSLATIONS_PL[activity.id].description;
+  }
+  return activity.description;
+}
 
 
 
@@ -2127,7 +2249,9 @@ function getFilteredActivities() {
   if (state.filters.search) {
     const q = state.filters.search.toLowerCase();
     items = items.filter(a =>
+      actTitle(a).toLowerCase().includes(q) ||
       a.title.toLowerCase().includes(q) ||
+      (actDesc(a) && actDesc(a).toLowerCase().includes(q)) ||
       (a.description && a.description.toLowerCase().includes(q)) ||
       (a.location_name && a.location_name.toLowerCase().includes(q))
     );
@@ -2210,7 +2334,7 @@ function renderListView(activities) {
     return `<div class="list-card" onclick='openDetailById("${a.id}")'>
       <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
       <div class="list-card-info">
-        <h3>${a.title}</h3>
+        <h3>${actTitle(a)}</h3>
         ${badges ? `<div style="margin:3px 0">${badges}</div>` : ''}
         <div class="list-meta">
           <span>📅 ${dateStr} ${timeStr}</span>
@@ -2384,7 +2508,7 @@ function renderMyActivitiesView() {
     return `<div class="list-card" onclick='openDetailById("${a.id}")'>
       <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
       <div class="list-card-info">
-        <h3>${a.title}</h3>
+        <h3>${actTitle(a)}</h3>
         ${badges ? `<div style="margin:3px 0">${badges}</div>` : ''}
         <div class="list-meta">
           <span>📅 ${dateStr} ${timeStr}</span>
@@ -2498,17 +2622,17 @@ function openDetail(activity) {
       <button onclick="closeAllPanels()" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.4);border:none;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">&times;</button>
     </div>
     <div class="detail-info">
-      <h1>${activity.title}</h1>
+      <h1>${actTitle(activity)}</h1>
       ${getTimingBadge(activity) ? `<div style="margin:8px 0">${getTimingBadge(activity)}</div>` : ''}
       <div class="detail-meta">
-        <div class="meta-item" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="cursor:pointer;color:var(--primary)">📅 ${dateStr} <span style="font-size:11px">+ cal</span></div>
+        <div class="meta-item" onclick="addToCalendar('${encodeURIComponent(actTitle(activity))}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(actDesc(activity) || '')}')" style="cursor:pointer;color:var(--primary)">📅 ${dateStr} <span style="font-size:11px">+ cal</span></div>
         <div class="meta-item">🕐 ${timeStr}</div>
         <div class="meta-item">📍 ${activity.location_name || 'TBA'}</div>
         ${activity.address ? `<div class="meta-item" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.address + ', ' + (state.currentCity?.name || ''))}','_blank')" style="cursor:pointer;color:var(--primary)">🗺️ ${activity.address} ↗</div>` : ''}
         <div class="meta-item">🔄 ${freqLabel[activity.frequency] || activity.frequency}</div>
         <div class="meta-item">💰 ${price}</div>
       </div>
-      <p class="detail-description">${activity.description || ''}</p>
+      <p class="detail-description">${actDesc(activity) || ''}</p>
       ${activity.source_url && activity.source !== 'user' && state.user
         ? `<div class="detail-host" onclick="window.open('${activity.source_url}','_blank')" style="cursor:pointer">`
         : !state.user
@@ -2531,7 +2655,7 @@ function openDetail(activity) {
               ${isFull ? t('joinWaitlist') : '✋ ' + t('joinActivity')}
             </button>`
         }
-        <button class="btn btn-secondary" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="padding:12px 16px" title="Add to Calendar">
+        <button class="btn btn-secondary" onclick="addToCalendar('${encodeURIComponent(actTitle(activity))}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(actDesc(activity) || '')}')" style="padding:12px 16px" title="Add to Calendar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
         ${isOwnEvent
@@ -2596,9 +2720,9 @@ function showJoinConfirmation(activity) {
     <div class="join-confirm" style="padding:32px 20px;">
       <div class="check-icon">✓</div>
       <h3>${t('joinConfirmTitle')}</h3>
-      <p>${activity.title}</p>
+      <p>${actTitle(activity)}</p>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:24px">${t('joinConfirmText')}</p>
-      <button class="btn btn-primary btn-full" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}');" style="margin-bottom:10px;">
+      <button class="btn btn-primary btn-full" onclick="addToCalendar('${encodeURIComponent(actTitle(activity))}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(actDesc(activity) || '')}');" style="margin-bottom:10px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         ${t('addToCalendar')}
       </button>
@@ -3058,9 +3182,13 @@ function openProfile() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           ${t('editProfile')}
         </div>
-        <div class="profile-menu-item" onclick="closeAllPanels();switchView('mine');">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          ${t('myActivities')}
+        <div style="padding:16px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);display:flex;align-items:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            ${t('sendFeedback')}
+          </div>
+          <textarea id="feedback-input" rows="3" placeholder="${t('feedbackPlaceholder')}" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;resize:none;background:var(--bg);color:var(--text);font-family:inherit;box-sizing:border-box;"></textarea>
+          <button onclick="submitFeedback()" class="btn btn-primary" style="margin-top:8px;width:100%;padding:10px;font-size:13px;">${t('sendFeedback')}</button>
         </div>
         ${!isPremium ? `
         <div class="profile-menu-item" onclick="toast('${t('upgradePremium')} — ${t('comingSoon')}')">
@@ -3292,7 +3420,7 @@ function showMyActivities() {
         <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="closeAllPanels();setTimeout(()=>openDetailById('${a.id}'),300);">
           <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color};flex-shrink:0;">${cat.icon}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${a.title}</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${actTitle(a)}</div>
             <div style="font-size:12px;color:var(--text-muted);">📅 ${dateStr} ${timeStr} · 👥 ${pCount}${a.max_participants ? '/' + a.max_participants : ''}</div>
           </div>
           <button onclick="event.stopPropagation();confirmDeleteActivity('${a.id}',${pCount})" style="flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;" title="Delete">
@@ -3313,7 +3441,7 @@ function showMyActivities() {
         <div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer;" onclick="closeAllPanels();setTimeout(()=>openDetailById('${a.id}'),300);">
           <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color};flex-shrink:0;">${cat.icon}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${a.title}</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">${actTitle(a)}</div>
             <div style="font-size:12px;color:var(--text-muted);">📅 ${dateStr} ${timeStr} · 📍 ${a.location_name || ''}</div>
           </div>
         </div>`;
@@ -3355,13 +3483,13 @@ function confirmDeleteActivity(activityId, participantCount) {
   if (participantCount > 1) {
     msg = (t('deleteConfirmMany') || '{{count}} people are planning to attend. Are you sure you want to delete "{{title}}"?')
       .replace('{{count}}', participantCount)
-      .replace('{{title}}', activity.title);
+      .replace('{{title}}', actTitle(activity));
   } else if (participantCount === 1) {
     msg = (t('deleteConfirmOne') || 'Someone is planning to attend. Are you sure you want to delete "{{title}}"?')
-      .replace('{{title}}', activity.title);
+      .replace('{{title}}', actTitle(activity));
   } else {
     msg = (t('deleteConfirmEmpty') || 'Are you sure you want to delete "{{title}}"?')
-      .replace('{{title}}', activity.title);
+      .replace('{{title}}', actTitle(activity));
   }
 
   // Show confirmation overlay
@@ -3411,6 +3539,23 @@ function deleteActivity(activityId) {
   renderActivities();
   toast(t('activityDeleted') || 'Activity deleted');
   if (state.currentView === 'mine') renderMyActivitiesView();
+}
+
+async function submitFeedback() {
+  const input = document.getElementById('feedback-input');
+  const text = input?.value?.trim();
+  if (!text) { toast('Please enter your feedback'); return; }
+  // Store feedback locally (will sync to Supabase later)
+  const feedbackList = JSON.parse(localStorage.getItem('gather-feedback') || '[]');
+  feedbackList.push({
+    text,
+    user: state.user?.email || 'anonymous',
+    name: state.profile?.display_name || '',
+    timestamp: new Date().toISOString()
+  });
+  localStorage.setItem('gather-feedback', JSON.stringify(feedbackList));
+  input.value = '';
+  toast(t('feedbackSent'));
 }
 
 async function handleLogout() {
