@@ -292,9 +292,13 @@ html, body {
 .marker-lang-badge.pl { color: var(--lang-pl); }
 .marker-lang-badge.en-pl { color: var(--lang-enpl); }
 
-/* Timing pulse on markers */
+/* Default: NO pulse on any marker */
+.activity-marker::after { display: none !important; }
+
+/* Only these classes enable the pulse */
 .activity-marker.happening-now { border-color: var(--success); }
 .activity-marker.happening-now::after {
+  display: block !important;
   content: '';
   position: absolute;
   inset: -6px;
@@ -304,6 +308,7 @@ html, body {
 }
 .activity-marker.happening-soon { border-color: #16a34a; }
 .activity-marker.happening-soon::after {
+  display: block !important;
   content: '';
   position: absolute;
   inset: -5px;
