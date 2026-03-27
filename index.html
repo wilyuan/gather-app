@@ -2398,7 +2398,20 @@ function openCityPicker() {
         <div class="city-desc">${cityDescs[c.name] || c.country}</div>
       </div>
     </div>
-  `).join('');
+  `).join('') + `
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">🌍 Don't see your city?</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Tell us where you'd like Gather next. The most requested cities get added first!</p>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="city-request-input" placeholder="e.g. Gdańsk, Łódź, Prague..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;">
+        <button class="btn btn-primary" onclick="submitCityRequest()" style="padding:10px 18px;white-space:nowrap;">Send</button>
+      </div>
+      <div id="city-request-votes" style="margin-top:12px;"></div>
+    </div>
+  `;
+
+  // Show existing city vote counts
+  renderCityVotes();
 
   openPanel('city-panel');
 }
@@ -2418,6 +2431,57 @@ async function selectCity(cityId) {
   state.map.flyTo([city.lat, city.lng], city.zoom_level || 13, { duration: 1.5 });
   renderActivities();
   toast(`${t('switchedTo')} ${city.name}`);
+}
+
+// ============================================
+// CITY REQUESTS / FEEDBACK
+// ============================================
+// Store city requests locally + push to Supabase if connected
+const cityRequests = JSON.parse(localStorage.getItem('gather-city-requests') || '{}');
+
+function submitCityRequest() {
+  const input = document.getElementById('city-request-input');
+  const cityName = input.value.trim();
+  if (!cityName) { toast('Please enter a city name'); return; }
+
+  // Normalize
+  const key = cityName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
+
+  // Increment local vote count
+  cityRequests[key] = cityRequests[key] || { name: cityName, votes: 0 };
+  cityRequests[key].votes += 1;
+  localStorage.setItem('gather-city-requests', JSON.stringify(cityRequests));
+
+  // Push to Supabase if connected (fire-and-forget)
+  if (sb) {
+    sb.from('city_requests').upsert({
+      city_name: cityName,
+      requested_by: state.user?.id || null,
+      requested_at: new Date().toISOString()
+    }, { onConflict: 'city_name,requested_by' }).then(() => {});
+  }
+
+  input.value = '';
+  toast(`Thanks! "${cityName}" has been requested 🗳️`);
+  renderCityVotes();
+}
+
+function renderCityVotes() {
+  const el = document.getElementById('city-request-votes');
+  if (!el) return;
+
+  const sorted = Object.values(cityRequests).sort((a, b) => b.votes - a.votes).slice(0, 5);
+  if (!sorted.length) return;
+
+  el.innerHTML = `
+    <p style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Most requested</p>
+    ${sorted.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;">
+        <span style="font-weight:600">🌍 ${c.name}</span>
+        <span style="background:var(--bg);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;color:var(--primary)">${c.votes} vote${c.votes === 1 ? '' : 's'}</span>
+      </div>
+    `).join('')}
+  `;
 }
 
 // ============================================
