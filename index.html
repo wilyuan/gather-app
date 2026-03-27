@@ -1522,10 +1522,10 @@ function refreshCreatePanel() {
 // DEMO DATA (used when Supabase is not connected)
 // ============================================
 const DEMO_CITIES = [
-  { id: 'warsaw', name: 'Warsaw', country: 'Poland', region: 'europe', lat: 52.2297, lng: 21.0122, zoom_level: 14 },
-  { id: 'krakow', name: 'Kraków', country: 'Poland', region: 'europe', lat: 50.0647, lng: 19.9450, zoom_level: 14 },
-  { id: 'wroclaw', name: 'Wrocław', country: 'Poland', region: 'europe', lat: 51.1079, lng: 17.0385, zoom_level: 14 },
-  { id: 'poznan', name: 'Poznań', country: 'Poland', region: 'europe', lat: 52.4064, lng: 16.9252, zoom_level: 14 },
+  { id: 'warsaw', name: 'Warsaw', country: 'Poland', region: 'europe', lat: 52.2297, lng: 21.0122, zoom_level: 13 },
+  { id: 'krakow', name: 'Kraków', country: 'Poland', region: 'europe', lat: 50.0647, lng: 19.9450, zoom_level: 13 },
+  { id: 'wroclaw', name: 'Wrocław', country: 'Poland', region: 'europe', lat: 51.1079, lng: 17.0385, zoom_level: 13 },
+  { id: 'poznan', name: 'Poznań', country: 'Poland', region: 'europe', lat: 52.4064, lng: 16.9252, zoom_level: 13 },
   { id: 'la', name: 'Los Angeles', country: 'USA', region: 'us', lat: 34.0522, lng: -118.2437, zoom_level: 12 },
   { id: 'sav', name: 'Savannah', country: 'USA', region: 'us', lat: 32.0809, lng: -81.0912, zoom_level: 14 }
 ];
@@ -2228,7 +2228,7 @@ function initMap() {
 
   state.map = L.map('map', {
     center: [state.currentCity.lat, state.currentCity.lng],
-    zoom: state.currentCity.zoom_level || 14,
+    zoom: state.currentCity.zoom_level || 13,
     zoomControl: false
   });
 
@@ -3144,7 +3144,7 @@ async function selectCity(cityId) {
     await loadActivities();
   }
 
-  state.map.flyTo([city.lat, city.lng], city.zoom_level || 14, { duration: 1.5 });
+  state.map.flyTo([city.lat, city.lng], city.zoom_level || 13, { duration: 1.5 });
   renderActivities();
   toast(`${t('switchedTo')} ${city.name}`);
 }
