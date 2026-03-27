@@ -292,32 +292,20 @@ html, body {
 .marker-lang-badge.pl { color: var(--lang-pl); }
 .marker-lang-badge.en-pl { color: var(--lang-enpl); }
 
-/* Default: NO pulse on any marker */
-.activity-marker::after { display: none !important; }
-
-/* Only these classes enable the pulse */
+/* Timing border colors only — NO ::after pseudo-elements */
 .activity-marker.happening-now { border-color: var(--success); }
-.activity-marker.happening-now::after {
-  display: block !important;
-  content: '';
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid var(--success);
-  animation: pulse-ring 1.5s ease-out infinite;
-}
 .activity-marker.happening-soon { border-color: #16a34a; }
-.activity-marker.happening-soon::after {
-  display: block !important;
-  content: '';
+.activity-marker.happening-upcoming { border-color: #fb923c; }
+
+/* Pulse ring — applied via inline HTML span, not ::after */
+.pulse-ring {
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  border: 2px solid #16a34a;
+  border: 2px solid currentColor;
   animation: pulse-ring 2s ease-out infinite;
+  pointer-events: none;
 }
-.activity-marker.happening-upcoming { border-color: #fb923c; }
-
 @keyframes pulse-ring {
   0% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.5); }
@@ -2174,12 +2162,14 @@ function renderMarkers(activities) {
     const timing = getActivityTiming(activity);
     const timingClass = timing === 'now' ? 'happening-now' : timing === 'soon' ? 'happening-soon' : timing === 'upcoming' ? 'happening-upcoming' : '';
     const isMyEvent = createdIds.has(activity.id) || (state.user?.id && activity.host_id === state.user.id);
+    const pulseColor = timing === 'now' ? 'var(--success)' : timing === 'soon' ? '#16a34a' : '';
     const icon = L.divIcon({
       className: '',
       html: `<div class="activity-marker ${activity.is_business ? 'business' : ''} ${timingClass} ${isMyEvent ? 'my-event' : ''}" style="background:${cat.color}">
         ${cat.icon}
         <div class="marker-lang-badge ${langClass}">${langLabel}</div>
         ${isMyEvent ? '<div class="my-event-badge">★</div>' : ''}
+        ${pulseColor ? `<span class="pulse-ring" style="color:${pulseColor}"></span>` : ''}
       </div>`,
       iconSize: [38, 38],
       iconAnchor: [19, 19]
@@ -2436,7 +2426,8 @@ function openDetail(activity) {
   const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : t('free');
   const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
   // For user's own events, always show their current profile name/avatar
-  const isOwnEvent = state.user?.id && activity.host_id === state.user.id;
+  const detailCreatedIds = new Set(JSON.parse(localStorage.getItem('gather-created') || '[]'));
+  const isOwnEvent = detailCreatedIds.has(activity.id) || (state.user?.id && activity.host_id === state.user.id);
   const hostDisplayName = isOwnEvent ? (state.profile?.display_name || activity.host_name || 'Anonymous') : (activity.host_name || 'Anonymous');
   const hostInitial = (hostDisplayName)[0].toUpperCase();
   const hostAvatarUrl = isOwnEvent ? state.profile?.avatar_url : activity.host_avatar;
@@ -2474,9 +2465,12 @@ function openDetail(activity) {
         ${isFull ? `<span style="color:var(--danger);font-weight:600"> — ${t('full')}</span>` : ''}
       </div>
       <div class="detail-actions">
-        <button class="btn ${isFull ? 'btn-secondary' : 'btn-primary'} btn-full" onclick="joinActivity('${activity.id}')" ${isFull ? 'disabled' : ''}>
-          ${isFull ? t('joinWaitlist') : '✋ ' + t('joinActivity')}
-        </button>
+        ${isOwnEvent
+          ? `<button class="btn btn-primary btn-full" onclick="closeAllPanels();setTimeout(()=>{openEditActivity('${activity.id}')},300);">✏️ ${t('editEvent') || 'Edit Event'}</button>`
+          : `<button class="btn ${isFull ? 'btn-secondary' : 'btn-primary'} btn-full" onclick="joinActivity('${activity.id}')" ${isFull ? 'disabled' : ''}>
+              ${isFull ? t('joinWaitlist') : '✋ ' + t('joinActivity')}
+            </button>`
+        }
         <button class="btn btn-secondary" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="padding:12px 16px" title="Add to Calendar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
@@ -2484,6 +2478,11 @@ function openDetail(activity) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="${isActivitySaved(activity.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
       </div>
+      ${isOwnEvent ? `
+        <button onclick="confirmDeleteActivity('${activity.id}', ${activity.participants || 0})" style="width:100%;margin-top:8px;padding:12px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;">
+          🗑️ ${t('deleteEvent') || 'Delete Event'}
+        </button>
+      ` : ''}
     </div>
   `;
   openPanel('detail-panel');
