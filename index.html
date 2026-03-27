@@ -1187,9 +1187,12 @@ const state = {
   markers: [],
   filters: { category: null, lang: 'all', time: 'all', type: 'all', date: null, search: '' },
   currentView: 'map',
+  savedTab: 'saved', // 'saved' or 'joined'
   authMode: 'signup', // 'signup' or 'login'
   demoMode: !sb, // legacy — use isDemo() instead
   appLang: localStorage.getItem('gather-lang') || 'en',
+  savedIds: JSON.parse(localStorage.getItem('gather-saved') || '[]'),
+  joinedIds: JSON.parse(localStorage.getItem('gather-joined') || '[]'),
   map: null,
   markerLayer: null
 };
@@ -1251,11 +1254,16 @@ const TRANSLATIONS = {
     // Empty states & toasts
     noActivities: 'No activities found',
     tryChangingFilters: 'Try changing your filters or search',
+    saved: 'Saved',
+    joined: 'Joined',
     noSaved: 'No saved activities yet',
+    noJoined: 'No joined activities yet',
     tapBookmark: 'Tap the bookmark icon on any activity to save it',
+    tapJoin: 'Join an activity to see it here',
     youJoined: 'You joined! See you there',
     alreadyJoined: 'You already joined this activity',
     activitySaved: 'Activity saved!',
+    activityUnsaved: 'Removed from saved',
     activityCreated: 'Activity created!',
     switchedTo: 'Switched to',
     fillRequired: 'Please fill in all required fields',
@@ -1319,11 +1327,16 @@ const TRANSLATIONS = {
     culturalCapital: 'Stolica kultury · 800 tys. mieszkańców',
     noActivities: 'Nie znaleziono aktywności',
     tryChangingFilters: 'Spróbuj zmienić filtry lub wyszukiwanie',
+    saved: 'Zapisane',
+    joined: 'Dołączono',
     noSaved: 'Brak zapisanych aktywności',
+    noJoined: 'Brak dołączonych aktywności',
     tapBookmark: 'Stuknij ikonę zakładki przy aktywności, aby ją zapisać',
+    tapJoin: 'Dołącz do aktywności, aby zobaczyć ją tutaj',
     youJoined: 'Dołączyłeś! Do zobaczenia',
     alreadyJoined: 'Już dołączyłeś do tej aktywności',
     activitySaved: 'Aktywność zapisana!',
+    activityUnsaved: 'Usunięto z zapisanych',
     activityCreated: 'Aktywność utworzona!',
     switchedTo: 'Przełączono na',
     fillRequired: 'Wypełnij wszystkie wymagane pola',
@@ -2145,9 +2158,57 @@ function switchView(view) {
 }
 
 function renderSavedView() {
-  // In demo mode, show placeholder
   const el = document.getElementById('list-view');
-  el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">🔖</p><p style="font-weight:600">${t('noSaved')}</p><p style="font-size:13px;margin-top:4px">${t('tapBookmark')}</p></div>`;
+  const tab = state.savedTab || 'saved';
+  const savedItems = state.activities.filter(a => state.savedIds.includes(a.id));
+  const joinedItems = state.activities.filter(a => state.joinedIds.includes(a.id));
+
+  const tabBar = `
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px;">
+      <button onclick="state.savedTab='saved';renderSavedView();" style="flex:1;padding:12px;font-weight:600;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${tab === 'saved' ? 'var(--primary)' : 'transparent'};color:${tab === 'saved' ? 'var(--primary)' : 'var(--text-muted)'};margin-bottom:-2px;">
+        🔖 ${t('saved') || 'Saved'} (${savedItems.length})
+      </button>
+      <button onclick="state.savedTab='joined';renderSavedView();" style="flex:1;padding:12px;font-weight:600;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${tab === 'joined' ? 'var(--primary)' : 'transparent'};color:${tab === 'joined' ? 'var(--primary)' : 'var(--text-muted)'};margin-bottom:-2px;">
+        ✋ ${t('joined') || 'Joined'} (${joinedItems.length})
+      </button>
+    </div>`;
+
+  const items = tab === 'saved' ? savedItems : joinedItems;
+
+  if (!items.length) {
+    const emptyIcon = tab === 'saved' ? '🔖' : '✋';
+    const emptyTitle = tab === 'saved' ? (t('noSaved') || 'No saved activities yet') : (t('noJoined') || 'No joined activities yet');
+    const emptyHint = tab === 'saved' ? (t('tapBookmark') || 'Tap the bookmark icon on any activity to save it') : (t('tapJoin') || 'Join an activity to see it here');
+    el.innerHTML = tabBar + `<div style="text-align:center;padding:40px 20px;color:var(--text-muted)"><p style="font-size:40px;margin-bottom:12px">${emptyIcon}</p><p style="font-weight:600">${emptyTitle}</p><p style="font-size:13px;margin-top:4px">${emptyHint}</p></div>`;
+    return;
+  }
+
+  const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
+  el.innerHTML = tabBar + items.map(a => {
+    const cat = getCategoryInfo(a.category_id);
+    const langClass = a.lang === 'en_pl' ? 'en-pl' : a.lang;
+    const langLabel = a.lang === 'en' ? '🇬🇧 EN' : a.lang === 'pl' ? '🇵🇱 PL' : '🇬🇧🇵🇱';
+    const date = new Date(a.starts_at);
+    const dateStr = date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    const price = a.price_cents ? `${(a.price_cents/100).toFixed(0)} PLN` : t('free');
+    const badges = getTimingBadge(a);
+
+    return `<div class="list-card" onclick='openDetailById("${a.id}")'>
+      <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
+      <div class="list-card-info">
+        <h3>${a.title}</h3>
+        ${badges ? `<div style="margin:3px 0">${badges}</div>` : ''}
+        <div class="list-meta">
+          <span>📅 ${dateStr} ${timeStr}</span>
+          <span>📍 ${a.location_name || ''}</span>
+          <span>👥 ${a.participants || 0}${a.max_participants ? '/'+a.max_participants : ''}</span>
+          <span>${price}</span>
+        </div>
+      </div>
+      <div class="lang-tag ${langClass}">${langLabel}</div>
+    </div>`;
+  }).join('');
 }
 
 // ============================================
@@ -2221,8 +2282,8 @@ function openDetail(activity) {
         <button class="btn btn-secondary" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="padding:12px 16px" title="Add to Calendar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </button>
-        <button class="btn btn-secondary" onclick="saveActivity('${activity.id}')" style="padding:12px 16px" title="Save">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <button class="btn btn-secondary" onclick="saveActivity('${activity.id}')" style="padding:12px 16px;${isActivitySaved(activity.id) ? 'background:var(--primary);color:white;' : ''}" title="${isActivitySaved(activity.id) ? 'Unsave' : 'Save'}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="${isActivitySaved(activity.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
       </div>
     </div>
@@ -2271,6 +2332,7 @@ async function joinActivity(activityId) {
 
 function showJoinConfirmation(activity) {
   if (!activity) { toast(t('youJoined') + ' 🎉'); closeAllPanels(); renderActivities(); return; }
+  trackJoined(activity.id);
   const cat = getCategoryInfo(activity.category_id);
   document.getElementById('detail-content').innerHTML = `
     <div class="panel-handle"></div>
@@ -2290,7 +2352,29 @@ function showJoinConfirmation(activity) {
 }
 
 function saveActivity(activityId) {
-  toast(t('activitySaved') + ' 🔖');
+  const idx = state.savedIds.indexOf(activityId);
+  if (idx > -1) {
+    state.savedIds.splice(idx, 1);
+    toast(t('activityUnsaved') || 'Removed from saved');
+  } else {
+    state.savedIds.push(activityId);
+    toast(t('activitySaved') + ' 🔖');
+  }
+  localStorage.setItem('gather-saved', JSON.stringify(state.savedIds));
+  // Update bookmark icon in detail view if open
+  const saveBtn = document.querySelector('.save-btn-active');
+  if (saveBtn) saveBtn.classList.toggle('active');
+}
+
+function trackJoined(activityId) {
+  if (!state.joinedIds.includes(activityId)) {
+    state.joinedIds.push(activityId);
+    localStorage.setItem('gather-joined', JSON.stringify(state.joinedIds));
+  }
+}
+
+function isActivitySaved(activityId) {
+  return state.savedIds.includes(activityId);
 }
 
 // ============================================
@@ -2306,14 +2390,11 @@ function addToCalendar(titleEnc, startsAt, locationEnc, descEnc) {
   const location = decodeURIComponent(locationEnc);
   const desc = decodeURIComponent(descEnc);
   const start = new Date(startsAt);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
-
-  // Format for Google Calendar
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
   const fmt = d => d.toISOString().replace(/[-:]/g, '').replace('.000', '');
-  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(start)}/${fmt(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(desc + '\n\nFound on Gather — gather-app-pink.vercel.app')}`;
 
-  // Generate .ics file for Apple Calendar
-  const icsContent = [
+  // Generate .ics and trigger download — opens user's default calendar app
+  const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Gather//EN',
@@ -2322,39 +2403,12 @@ function addToCalendar(titleEnc, startsAt, locationEnc, descEnc) {
     `DTEND:${fmt(end)}`,
     `SUMMARY:${title}`,
     `LOCATION:${location}`,
-    `DESCRIPTION:${desc}\\nFound on Gather`,
+    `DESCRIPTION:${desc.replace(/\n/g, '\\n')}\\nFound on Gather`,
     `URL:https://gather-app-pink.vercel.app`,
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');
 
-  // Show options
-  const panel = document.createElement('div');
-  panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;padding:20px;z-index:3000;box-shadow:0 -4px 20px rgba(0,0,0,0.15);max-width:480px;margin:0 auto;';
-  panel.innerHTML = `
-    <div style="width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px;"></div>
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">${t('addToCalendar')}</h3>
-    <a href="${googleUrl}" target="_blank" class="btn btn-full" style="background:#4285F4;color:white;margin-bottom:10px;text-decoration:none;" onclick="this.parentElement.parentElement.remove()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      ${t('googleCalendar')}
-    </a>
-    <button class="btn btn-full" style="background:#333;color:white;margin-bottom:10px;" onclick="downloadICS(this)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      ${t('appleCalendar')}
-    </button>
-    <button class="btn btn-secondary btn-full" onclick="this.parentElement.parentElement.remove()">${t('cancel')}</button>
-  `;
-
-  // Store ICS data on button
-  panel.querySelector('[onclick*="downloadICS"]').dataset.ics = icsContent;
-  panel.querySelector('[onclick*="downloadICS"]').dataset.title = title;
-
-  document.body.appendChild(panel);
-}
-
-function downloadICS(btn) {
-  const ics = btn.dataset.ics;
-  const title = btn.dataset.title;
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2362,8 +2416,7 @@ function downloadICS(btn) {
   a.download = title.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.ics';
   a.click();
   URL.revokeObjectURL(url);
-  btn.closest('div[style]').remove();
-  toast(t('calendarDownloaded'));
+  toast(t('calendarDownloaded') || 'Added to calendar 📅');
 }
 
 // ============================================
