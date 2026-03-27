@@ -1518,10 +1518,10 @@ function refreshCreatePanel() {
 // DEMO DATA (used when Supabase is not connected)
 // ============================================
 const DEMO_CITIES = [
-  { id: 'warsaw', name: 'Warsaw', country: 'Poland', lat: 52.2297, lng: 21.0122, zoom_level: 13 },
-  { id: 'krakow', name: 'Kraków', country: 'Poland', lat: 50.0647, lng: 19.9450, zoom_level: 13 },
-  { id: 'wroclaw', name: 'Wrocław', country: 'Poland', lat: 51.1079, lng: 17.0385, zoom_level: 13 },
-  { id: 'poznan', name: 'Poznań', country: 'Poland', lat: 52.4064, lng: 16.9252, zoom_level: 13 }
+  { id: 'warsaw', name: 'Warsaw', country: 'Poland', lat: 52.2297, lng: 21.0122, zoom_level: 14 },
+  { id: 'krakow', name: 'Kraków', country: 'Poland', lat: 50.0647, lng: 19.9450, zoom_level: 14 },
+  { id: 'wroclaw', name: 'Wrocław', country: 'Poland', lat: 51.1079, lng: 17.0385, zoom_level: 14 },
+  { id: 'poznan', name: 'Poznań', country: 'Poland', lat: 52.4064, lng: 16.9252, zoom_level: 14 }
 ];
 
 const DEMO_CATEGORIES = [
@@ -2025,7 +2025,7 @@ function initMap() {
 
   state.map = L.map('map', {
     center: [state.currentCity.lat, state.currentCity.lng],
-    zoom: state.currentCity.zoom_level || 13,
+    zoom: state.currentCity.zoom_level || 14,
     zoomControl: false
   });
 
@@ -2406,8 +2406,63 @@ function openPanel(id) {
 }
 function closeAllPanels() {
   document.getElementById('panel-overlay').classList.remove('visible');
-  document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.slide-panel').forEach(p => {
+    p.classList.remove('visible');
+    p.style.transform = '';
+  });
 }
+
+// Swipe-to-close for all slide panels
+(function initSwipePanels() {
+  let startY = 0, currentY = 0, isDragging = false, panel = null;
+
+  document.addEventListener('touchstart', (e) => {
+    panel = e.target.closest('.slide-panel');
+    if (!panel || !panel.classList.contains('visible')) { panel = null; return; }
+    // Only start drag from panel handle or top 60px of panel
+    const handle = panel.querySelector('.panel-handle');
+    const rect = panel.getBoundingClientRect();
+    const touchY = e.touches[0].clientY;
+    if (handle && handle.contains(e.target)) {
+      isDragging = true;
+    } else if (touchY - rect.top < 60) {
+      isDragging = true;
+    } else {
+      panel = null; return;
+    }
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    panel.style.transition = 'none';
+  });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging || !panel) return;
+    currentY = e.touches[0].clientY;
+    const dy = Math.max(0, currentY - startY);
+    // Check if panel is on desktop (centered)
+    const isDesktop = window.innerWidth > 600;
+    if (isDesktop) {
+      panel.style.transform = `translateX(-50%) translateY(${dy}px)`;
+    } else {
+      panel.style.transform = `translateY(${dy}px)`;
+    }
+  });
+
+  document.addEventListener('touchend', () => {
+    if (!isDragging || !panel) { isDragging = false; panel = null; return; }
+    const dy = currentY - startY;
+    panel.style.transition = '';
+    if (dy > 100) {
+      closeAllPanels();
+    } else {
+      // Snap back
+      const isDesktop = window.innerWidth > 600;
+      panel.style.transform = isDesktop ? 'translateX(-50%) translateY(0)' : 'translateY(0)';
+    }
+    isDragging = false;
+    panel = null;
+  });
+})();
 
 // ============================================
 // DETAIL VIEW
@@ -2440,6 +2495,7 @@ function openDetail(activity) {
     <div class="detail-hero" style="background:linear-gradient(135deg, ${cat.color}, ${cat.color}dd)">
       ${photoUrl ? `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="font-size:64px;display:none">${cat.icon}</span>` : `<span style="font-size:64px">${cat.icon}</span>`}
       <div class="detail-lang-badge ${langClass}">${langLabel}</div>
+      <button onclick="closeAllPanels()" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.4);border:none;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">&times;</button>
     </div>
     <div class="detail-info">
       <h1>${activity.title}</h1>
@@ -2858,7 +2914,7 @@ async function selectCity(cityId) {
     await loadActivities();
   }
 
-  state.map.flyTo([city.lat, city.lng], city.zoom_level || 13, { duration: 1.5 });
+  state.map.flyTo([city.lat, city.lng], city.zoom_level || 14, { duration: 1.5 });
   renderActivities();
   toast(`${t('switchedTo')} ${city.name}`);
 }
