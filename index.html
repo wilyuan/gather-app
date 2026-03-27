@@ -324,8 +324,9 @@ html, body {
   font-weight: 700;
   flex-shrink: 0;
 }
-.timing-badge.now { background: #dcfce7; color: #16a34a; }
-.timing-badge.soon { background: #fff7ed; color: #ea580c; }
+.timing-badge.now { background: #dcfce7; color: #16a34a; font-weight: 700; }
+.timing-badge.soon { background: #dcfce7; color: #16a34a; }
+.timing-badge.upcoming { background: #fff7ed; color: #ea580c; }
 .timing-badge.few-spots { background: #fef2f2; color: #dc2626; }
 
 /* Join confirmation */
@@ -1217,7 +1218,7 @@ const TRANSLATIONS = {
     host: 'Host', via: 'via', oneTime: 'One-time', everyWeek: 'Every week',
     every2Weeks: 'Every 2 weeks', monthly: 'Monthly', daily: 'Daily',
     free: 'Free', spotsLeft: 'spots left', spotLeft: 'spot left',
-    liveNow: 'LIVE NOW', within24h: 'Within 24h',
+    liveNow: 'LIVE NOW', within24h: 'Within 24h', within3Days: 'Within 3 days',
     // Auth
     joinTheFun: 'Join the fun',
     authSubtitle: 'Sign in to join activities, save events, and host your own.',
@@ -1281,8 +1282,6 @@ const TRANSLATIONS = {
     done: 'Done',
     installTip: 'Tip: Add Gather to your home screen for the best experience!',
     comingSoon: 'Coming Soon',
-    voteToUnlock: 'Vote to unlock!',
-    alreadyVoted: 'You already voted for this city!',
     dontSeeCity: "Don't see your city?",
     requestCityHint: "Tell us where you'd like Gather next!",
     send: 'Send',
@@ -1318,6 +1317,8 @@ const TRANSLATIONS = {
     viewEvent: 'View Your Event',
     onlyYouCanSee: 'Only you can see this',
     privateInfo: 'Private',
+    tapToChange: 'Tap to change photo',
+    photoUpdated: 'Photo updated!',
   },
   pl: {
     map: 'Mapa', list: 'Lista', saved: 'Zapisane', profile: 'Profil',
@@ -1332,7 +1333,7 @@ const TRANSLATIONS = {
     host: 'Organizator', via: 'przez', oneTime: 'Jednorazowe', everyWeek: 'Co tydzień',
     every2Weeks: 'Co 2 tygodnie', monthly: 'Co miesiąc', daily: 'Codziennie',
     free: 'Za darmo', spotsLeft: 'miejsc wolnych', spotLeft: 'miejsce wolne',
-    liveNow: 'TERAZ', within24h: 'W ciągu 24h',
+    liveNow: 'TERAZ', within24h: 'W ciągu 24h', within3Days: 'W ciągu 3 dni',
     joinTheFun: 'Dołącz do zabawy',
     authSubtitle: 'Zaloguj się, aby dołączać do aktywności, zapisywać wydarzenia i organizować własne.',
     continueGoogle: 'Kontynuuj z Google', continueApple: 'Kontynuuj z Apple',
@@ -1391,8 +1392,6 @@ const TRANSLATIONS = {
     done: 'Gotowe',
     installTip: 'Wskazówka: Dodaj Gather do ekranu głównego!',
     comingSoon: 'Wkrótce',
-    voteToUnlock: 'Głosuj, aby odblokować!',
-    alreadyVoted: 'Już zagłosowałeś na to miasto!',
     dontSeeCity: 'Nie widzisz swojego miasta?',
     requestCityHint: 'Powiedz nam, gdzie chcesz Gather!',
     send: 'Wyślij',
@@ -1428,6 +1427,8 @@ const TRANSLATIONS = {
     viewEvent: 'Zobacz swoje wydarzenie',
     onlyYouCanSee: 'Tylko Ty to widzisz',
     privateInfo: 'Prywatne',
+    tapToChange: 'Kliknij aby zmienić zdjęcie',
+    photoUpdated: 'Zdjęcie zaktualizowane!',
   }
 };
 
@@ -1769,6 +1770,10 @@ async function init() {
     }, 1500);
   }
 
+  // Always load local profile (even without Supabase)
+  await loadProfile();
+  updateUserButton();
+
   showApp();
 }
 
@@ -1908,12 +1913,20 @@ async function socialLogin(provider) {
 
 function updateUserButton() {
   const btn = document.getElementById('user-btn');
-  if (state.profile) {
-    btn.textContent = (state.profile.display_name || '?')[0].toUpperCase();
-  } else if (state.user) {
-    btn.textContent = (state.user.email || '?')[0].toUpperCase();
+  if (state.profile?.avatar_url) {
+    btn.textContent = '';
+    btn.style.backgroundImage = `url(${state.profile.avatar_url})`;
+    btn.style.backgroundSize = 'cover';
+    btn.style.backgroundPosition = 'center';
   } else {
-    btn.textContent = '?';
+    btn.style.backgroundImage = '';
+    if (state.profile) {
+      btn.textContent = (state.profile.display_name || '?')[0].toUpperCase();
+    } else if (state.user) {
+      btn.textContent = (state.user.email || '?')[0].toUpperCase();
+    } else {
+      btn.textContent = '?';
+    }
   }
 }
 
@@ -1921,11 +1934,7 @@ function updateUserButton() {
 // DATA LOADING (Supabase)
 // ============================================
 async function loadProfile() {
-  // Always load local profile first
-  const localProfile = JSON.parse(localStorage.getItem('gather-profile') || 'null');
-  if (localProfile) state.profile = { ...state.profile, ...localProfile };
-
-  // Try loading from Supabase
+  // Load from Supabase first (base layer)
   if (sb && state.user) {
     try {
       const { data } = await sb.from('profiles').select('*').eq('id', state.user.id).single();
@@ -1934,6 +1943,10 @@ async function loadProfile() {
       console.warn('Profile load from DB failed:', e.message);
     }
   }
+
+  // Then overlay local edits on top (local wins — user's latest changes take priority)
+  const localProfile = JSON.parse(localStorage.getItem('gather-profile') || 'null');
+  if (localProfile) state.profile = { ...state.profile, ...localProfile };
 
   // Ensure profile object exists
   if (!state.profile) {
@@ -1970,6 +1983,7 @@ async function loadActivities() {
       ...a,
       category_id: a.category?.id || a.category_id,
       host_name: a.host?.display_name || 'Anonymous',
+      host_avatar: a.host?.avatar_url || null,
       participants: a.participant_count?.[0]?.count || 0
     }));
     // Merge: keep demo + user-created local activities, add DB activities
@@ -2034,6 +2048,7 @@ function getTimingBadge(activity) {
   let badges = '';
   if (timing === 'now') badges += `<span class="timing-badge now">${t('liveNow')}</span> `;
   else if (timing === 'soon') badges += `<span class="timing-badge soon">${t('within24h')}</span> `;
+  else if (timing === 'upcoming') badges += `<span class="timing-badge upcoming">${t('within3Days') || 'Within 3 days'}</span> `;
   if (spotsLeft !== null && spotsLeft <= 3 && spotsLeft > 0) badges += `<span class="timing-badge few-spots">${spotsLeft} ${spotsLeft === 1 ? t('spotLeft') : t('spotsLeft')}</span>`;
   return badges;
 }
@@ -2129,7 +2144,7 @@ function renderMarkers(activities) {
     const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
     const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
     const timing = getActivityTiming(activity);
-    const timingClass = timing === 'now' ? 'happening-now' : timing === 'soon' ? 'happening-soon' : '';
+    const timingClass = timing === 'now' ? 'happening-now' : (timing === 'soon' || timing === 'upcoming') ? 'happening-soon' : '';
 
     const icon = L.divIcon({
       className: '',
@@ -2392,6 +2407,8 @@ function openDetail(activity) {
   const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : t('free');
   const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
   const hostInitial = (activity.host_name || 'A')[0].toUpperCase();
+  // Show current user's avatar for their own events, otherwise use stored host_avatar
+  const hostAvatarUrl = (activity.host_id === state.user?.id) ? state.profile?.avatar_url : activity.host_avatar;
   const isFull = activity.max_participants && activity.participants >= activity.max_participants;
   const photoUrl = CATEGORY_PHOTOS[activity.category_id] || null;
 
@@ -2415,7 +2432,7 @@ function openDetail(activity) {
       ${activity.source_url && activity.source !== 'user' ?
         `<div class="detail-host" onclick="window.open('${activity.source_url}','_blank')" style="cursor:pointer">` :
         `<div class="detail-host">`}
-        <div class="detail-host-avatar">${hostInitial}</div>
+        <div class="detail-host-avatar" ${hostAvatarUrl ? `style="background:none;padding:0;overflow:hidden;"` : ''}>${hostAvatarUrl ? `<img src="${hostAvatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : hostInitial}</div>
         <div>
           <div class="detail-host-name">${activity.host_name || 'Anonymous'} ${activity.source_url && activity.source !== 'user' ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
           <div class="detail-host-label">${t('host')}${activity.source !== 'user' ? ' · ' + t('via') + ' ' + activity.source.replace('scraped_','') : ''}</div>
@@ -2667,6 +2684,7 @@ async function submitActivity() {
     category_id: categoryId,
     city_id: state.currentCity.id,
     host_name: state.profile?.display_name || 'Anonymous',
+    host_avatar: state.profile?.avatar_url || null,
     host_id: state.user?.id,
     lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
     lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
@@ -2734,45 +2752,6 @@ async function submitActivity() {
 // ============================================
 // CITY PICKER
 // ============================================
-// Coming Soon cities — Phase 2 expansion targets
-const COMING_SOON_CITIES = [
-  { id: 'prague', name: 'Prague', country: 'Czech Republic', icon: '🏛️', desc: 'Expat hub · 1.3M population' },
-  { id: 'budapest', name: 'Budapest', country: 'Hungary', icon: '♨️', desc: 'Central European gem · 1.7M population' },
-  { id: 'berlin', name: 'Berlin', country: 'Germany', icon: '🐻', desc: 'Startup capital · 3.7M population' },
-  { id: 'vienna', name: 'Vienna', country: 'Austria', icon: '🎵', desc: 'Cultural heart of Europe · 1.9M population' },
-  { id: 'lisbon', name: 'Lisbon', country: 'Portugal', icon: '🌊', desc: 'Digital nomad favourite · 550K population' },
-  { id: 'amsterdam', name: 'Amsterdam', country: 'Netherlands', icon: '🚲', desc: 'International community · 900K population' },
-];
-
-function getComingSoonVotes(cityId) {
-  return (cityRequests[cityId] || {}).votes || 0;
-}
-
-function voteComingSoon(cityId, cityName) {
-  cityRequests[cityId] = cityRequests[cityId] || { name: cityName, votes: 0 };
-  // Check if user already voted (via localStorage flag)
-  const votedKey = 'gather-voted-' + cityId;
-  if (localStorage.getItem(votedKey)) {
-    toast(t('alreadyVoted') || 'You already voted for ' + cityName + '!');
-    return;
-  }
-  cityRequests[cityId].votes += 1;
-  localStorage.setItem('gather-city-requests', JSON.stringify(cityRequests));
-  localStorage.setItem(votedKey, '1');
-
-  // Push to Supabase if connected
-  if (sb) {
-    sb.from('city_requests').upsert({
-      city_name: cityName,
-      requested_by: state.user?.id || null,
-      requested_at: new Date().toISOString()
-    }, { onConflict: 'city_name,requested_by' }).then(() => {});
-  }
-
-  toast(`Voted for ${cityName}! 🗳️`);
-  openCityPicker(); // Re-render to update vote count
-}
-
 function openCityPicker() {
   const el = document.getElementById('city-list');
   document.getElementById('city-panel-title').textContent = t('chooseCity');
@@ -2790,33 +2769,7 @@ function openCityPicker() {
     </div>
   `).join('');
 
-  // Coming Soon section
-  html += `
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;">🚀 ${t('comingSoon') || 'Coming Soon'} — ${t('voteToUnlock') || 'Vote to unlock!'}</p>
-      ${COMING_SOON_CITIES.map(c => {
-        const votes = getComingSoonVotes(c.id);
-        const voted = !!localStorage.getItem('gather-voted-' + c.id);
-        const pct = Math.min(votes * 5, 100); // Visual progress — 20 votes = 100%
-        return `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
-          <div style="font-size:28px;width:44px;text-align:center;">${c.icon}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:15px;">${c.name}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${c.desc}</div>
-            <div style="margin-top:6px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:2px;transition:width 0.3s;"></div>
-            </div>
-          </div>
-          <button onclick="voteComingSoon('${c.id}','${c.name}')" style="padding:6px 14px;border-radius:20px;border:${voted ? 'none' : '1.5px solid var(--primary)'};background:${voted ? 'var(--primary)' : 'white'};color:${voted ? 'white' : 'var(--primary)'};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
-            ${voted ? '✓ ' + votes : '👍 ' + (votes || 'Vote')}
-          </button>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-
-  // Custom city request section
+  // City request section
   html += `
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
       <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">🌍 ${t('dontSeeCity') || "Don't see your city?"}</p>
@@ -2959,14 +2912,17 @@ function openProfile() {
       </div>
       <div class="panel-body">
         <div class="profile-header">
-          <div class="profile-avatar" style="position:relative;">
-            ${initial}
+          <div class="profile-avatar" style="position:relative;${state.profile?.avatar_url ? 'background:none;padding:0;overflow:hidden;' : ''}">
+            ${state.profile?.avatar_url
+              ? `<img src="${state.profile.avatar_url}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">`
+              : initial}
             <div onclick="openEditProfile()" style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </div>
           </div>
           <div class="profile-name">${name} ${isPremium ? '<span class="premium-badge">⭐ Premium</span>' : ''}</div>
-          <div class="profile-email">${state.user.email || ''} <span style="font-size:10px;color:var(--text-muted);opacity:0.7;">🔒 ${t('onlyYouCanSee') || 'Only you can see this'}</span></div>
+          <div class="profile-email">${state.user.email || ''}</div>
+          <div style="font-size:10px;color:var(--text-muted);opacity:0.6;margin-top:2px;">🔒 ${t('onlyYouCanSee') || 'Only you can see this'}</div>
           ${bio ? `<div style="font-size:13px;color:var(--text-muted);margin-top:4px;max-width:260px;text-align:center;">${bio}</div>` : ''}
           <div style="display:flex;gap:16px;margin-top:12px;">
             <div style="text-align:center;">
@@ -3028,8 +2984,19 @@ function openEditProfile() {
     </div>
     <div class="panel-body">
       <div style="text-align:center;margin-bottom:20px;">
-        <div class="profile-avatar" style="margin:0 auto 8px;">${(name[0] || 'U').toUpperCase()}</div>
-        <p style="font-size:12px;color:var(--text-muted);">${state.user?.email || ''} <span style="font-size:10px;opacity:0.6;">🔒 ${t('privateInfo') || 'Private'}</span></p>
+        <div onclick="document.getElementById('avatar-upload').click();" style="cursor:pointer;position:relative;display:inline-block;">
+          ${state.profile?.avatar_url
+            ? `<img src="${state.profile.avatar_url}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);">`
+            : `<div class="profile-avatar" style="margin:0 auto;">${(name[0] || 'U').toUpperCase()}</div>`
+          }
+          <div style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+        </div>
+        <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:6px;cursor:pointer;" onclick="document.getElementById('avatar-upload').click();">${t('tapToChange') || 'Tap to change photo'}</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">${state.user?.email || ''}</p>
+        <p style="font-size:10px;color:var(--text-muted);opacity:0.6;">🔒 ${t('privateInfo') || 'Private'}</p>
       </div>
 
       <div class="form-group">
@@ -3061,6 +3028,46 @@ function openEditProfile() {
     </div>
   `;
   openPanel('profile-panel');
+}
+
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { toast('Please select an image'); return; }
+  if (file.size > 5 * 1024 * 1024) { toast('Image too large (max 5MB)'); return; }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    // Resize to 200x200 for storage efficiency
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 200;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Crop to square center
+      const minDim = Math.min(img.width, img.height);
+      const sx = (img.width - minDim) / 2;
+      const sy = (img.height - minDim) / 2;
+      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+      // Save to profile
+      if (!state.profile) state.profile = {};
+      state.profile.avatar_url = dataUrl;
+      localStorage.setItem('gather-profile', JSON.stringify(state.profile));
+
+      // Refresh edit form to show new avatar
+      openEditProfile();
+      updateUserButton();
+      toast(t('photoUpdated') || 'Photo updated!');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveEditProfile() {
