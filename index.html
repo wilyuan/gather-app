@@ -263,6 +263,8 @@ html, body {
   transition: transform 0.2s;
 }
 .activity-marker:hover { transform: scale(1.2); }
+.activity-marker.my-event { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.3), 0 2px 8px rgba(0,0,0,0.25); }
+.activity-marker.my-event .my-event-badge { position:absolute; bottom:-3px; right:-3px; width:14px; height:14px; background:var(--primary); border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:7px; color:white; line-height:1; }
 
 .activity-marker.business {
   width: 28px;
@@ -2152,18 +2154,20 @@ function renderMarkers(activities) {
   if (!state.markerLayer) return;
   state.markerLayer.clearLayers();
 
+  const createdIds = new Set(JSON.parse(localStorage.getItem('gather-created') || '[]'));
   activities.forEach(activity => {
     const cat = getCategoryInfo(activity.category_id);
     const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
     const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
     const timing = getActivityTiming(activity);
     const timingClass = timing === 'now' ? 'happening-now' : (timing === 'soon' || timing === 'upcoming') ? 'happening-soon' : '';
-
+    const isMyEvent = createdIds.has(activity.id) || activity.host_id === state.user?.id;
     const icon = L.divIcon({
       className: '',
-      html: `<div class="activity-marker ${activity.is_business ? 'business' : ''} ${timingClass}" style="background:${cat.color}">
+      html: `<div class="activity-marker ${activity.is_business ? 'business' : ''} ${timingClass} ${isMyEvent ? 'my-event' : ''}" style="background:${cat.color}">
         ${cat.icon}
         <div class="marker-lang-badge ${langClass}">${langLabel}</div>
+        ${isMyEvent ? '<div class="my-event-badge">★</div>' : ''}
       </div>`,
       iconSize: [38, 38],
       iconAnchor: [19, 19]
