@@ -2453,12 +2453,14 @@ function openDetail(activity) {
         <div class="meta-item">💰 ${price}</div>
       </div>
       <p class="detail-description">${activity.description || ''}</p>
-      ${activity.source_url && activity.source !== 'user' ?
-        `<div class="detail-host" onclick="window.open('${activity.source_url}','_blank')" style="cursor:pointer">` :
-        `<div class="detail-host">`}
+      ${activity.source_url && activity.source !== 'user' && state.user
+        ? `<div class="detail-host" onclick="window.open('${activity.source_url}','_blank')" style="cursor:pointer">`
+        : !state.user
+          ? `<div class="detail-host" onclick="closeAllPanels();setTimeout(()=>showAuth('${t('signUpToSeeHost') || 'Sign up to see host details'}'),350);" style="cursor:pointer">`
+          : `<div class="detail-host">`}
         <div class="detail-host-avatar" ${hostAvatarUrl ? `style="background:none;padding:0;overflow:hidden;"` : ''}>${hostAvatarUrl ? `<img src="${hostAvatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : hostInitial}</div>
         <div>
-          <div class="detail-host-name">${hostDisplayName} ${activity.source_url && activity.source !== 'user' ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
+          <div class="detail-host-name">${hostDisplayName} ${activity.source_url && activity.source !== 'user' && state.user ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
           <div class="detail-host-label">${t('host')}${activity.source !== 'user' ? ' · ' + t('via') + ' ' + activity.source.replace('scraped_','') : ''}</div>
         </div>
       </div>
