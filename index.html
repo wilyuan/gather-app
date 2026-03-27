@@ -1316,6 +1316,8 @@ const TRANSLATIONS = {
     profileSaved: 'Profile saved!',
     nameRequired: 'Display name is required',
     viewEvent: 'View Your Event',
+    onlyYouCanSee: 'Only you can see this',
+    privateInfo: 'Private',
   },
   pl: {
     map: 'Mapa', list: 'Lista', saved: 'Zapisane', profile: 'Profil',
@@ -1424,6 +1426,8 @@ const TRANSLATIONS = {
     profileSaved: 'Profil zapisany!',
     nameRequired: 'Nazwa wyświetlana jest wymagana',
     viewEvent: 'Zobacz swoje wydarzenie',
+    onlyYouCanSee: 'Tylko Ty to widzisz',
+    privateInfo: 'Prywatne',
   }
 };
 
@@ -2662,7 +2666,7 @@ async function submitActivity() {
     description: desc,
     category_id: categoryId,
     city_id: state.currentCity.id,
-    host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
+    host_name: state.profile?.display_name || 'Anonymous',
     host_id: state.user?.id,
     lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
     lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
@@ -2962,7 +2966,7 @@ function openProfile() {
             </div>
           </div>
           <div class="profile-name">${name} ${isPremium ? '<span class="premium-badge">⭐ Premium</span>' : ''}</div>
-          <div class="profile-email">${state.user.email || ''}</div>
+          <div class="profile-email">${state.user.email || ''} <span style="font-size:10px;color:var(--text-muted);opacity:0.7;">🔒 ${t('onlyYouCanSee') || 'Only you can see this'}</span></div>
           ${bio ? `<div style="font-size:13px;color:var(--text-muted);margin-top:4px;max-width:260px;text-align:center;">${bio}</div>` : ''}
           <div style="display:flex;gap:16px;margin-top:12px;">
             <div style="text-align:center;">
@@ -3025,7 +3029,7 @@ function openEditProfile() {
     <div class="panel-body">
       <div style="text-align:center;margin-bottom:20px;">
         <div class="profile-avatar" style="margin:0 auto 8px;">${(name[0] || 'U').toUpperCase()}</div>
-        <p style="font-size:12px;color:var(--text-muted);">${state.user?.email || ''}</p>
+        <p style="font-size:12px;color:var(--text-muted);">${state.user?.email || ''} <span style="font-size:10px;opacity:0.6;">🔒 ${t('privateInfo') || 'Private'}</span></p>
       </div>
 
       <div class="form-group">
