@@ -300,14 +300,23 @@ html, body {
   border: 2px solid var(--success);
   animation: pulse-ring 1.5s ease-out infinite;
 }
-.activity-marker.happening-soon { border-color: #f97316; }
+.activity-marker.happening-soon { border-color: #16a34a; }
 .activity-marker.happening-soon::after {
   content: '';
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  border: 2px solid #f97316;
+  border: 2px solid #16a34a;
   animation: pulse-ring 2s ease-out infinite;
+}
+.activity-marker.happening-upcoming { border-color: #f97316; }
+.activity-marker.happening-upcoming::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid #f97316;
+  animation: pulse-ring 2.5s ease-out infinite;
 }
 
 @keyframes pulse-ring {
@@ -2160,7 +2169,7 @@ function renderMarkers(activities) {
     const langClass = activity.lang === 'en_pl' ? 'en-pl' : activity.lang;
     const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
     const timing = getActivityTiming(activity);
-    const timingClass = timing === 'now' ? 'happening-now' : (timing === 'soon' || timing === 'upcoming') ? 'happening-soon' : '';
+    const timingClass = timing === 'now' ? 'happening-now' : timing === 'soon' ? 'happening-soon' : timing === 'upcoming' ? 'happening-upcoming' : '';
     const isMyEvent = createdIds.has(activity.id) || activity.host_id === state.user?.id;
     const icon = L.divIcon({
       className: '',
@@ -2423,9 +2432,11 @@ function openDetail(activity) {
   const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : t('free');
   const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
-  const hostInitial = (activity.host_name || 'A')[0].toUpperCase();
-  // Show current user's avatar for their own events, otherwise use stored host_avatar
-  const hostAvatarUrl = (activity.host_id === state.user?.id) ? state.profile?.avatar_url : activity.host_avatar;
+  // For user's own events, always show their current profile name/avatar
+  const isOwnEvent = activity.host_id === state.user?.id;
+  const hostDisplayName = isOwnEvent ? (state.profile?.display_name || activity.host_name || 'Anonymous') : (activity.host_name || 'Anonymous');
+  const hostInitial = (hostDisplayName)[0].toUpperCase();
+  const hostAvatarUrl = isOwnEvent ? state.profile?.avatar_url : activity.host_avatar;
   const isFull = activity.max_participants && activity.participants >= activity.max_participants;
   const photoUrl = CATEGORY_PHOTOS[activity.category_id] || null;
 
@@ -2451,7 +2462,7 @@ function openDetail(activity) {
         `<div class="detail-host">`}
         <div class="detail-host-avatar" ${hostAvatarUrl ? `style="background:none;padding:0;overflow:hidden;"` : ''}>${hostAvatarUrl ? `<img src="${hostAvatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : hostInitial}</div>
         <div>
-          <div class="detail-host-name">${activity.host_name || 'Anonymous'} ${activity.source_url && activity.source !== 'user' ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
+          <div class="detail-host-name">${hostDisplayName} ${activity.source_url && activity.source !== 'user' ? '<span style="font-size:12px;color:var(--primary)">↗</span>' : ''}</div>
           <div class="detail-host-label">${t('host')}${activity.source !== 'user' ? ' · ' + t('via') + ' ' + activity.source.replace('scraped_','') : ''}</div>
         </div>
       </div>
