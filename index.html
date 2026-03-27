@@ -1280,7 +1280,18 @@ const TRANSLATIONS = {
     joinConfirmText: 'Add this to your calendar so you don\'t forget.',
     done: 'Done',
     installTip: 'Tip: Add Gather to your home screen for the best experience!',
-    comingSoon: 'coming soon!',
+    comingSoon: 'Coming Soon',
+    voteToUnlock: 'Vote to unlock!',
+    alreadyVoted: 'You already voted for this city!',
+    dontSeeCity: "Don't see your city?",
+    requestCityHint: "Tell us where you'd like Gather next!",
+    send: 'Send',
+    hosting: 'Hosting',
+    noHosting: "You haven't created any activities yet",
+    createConfirmText: 'Your activity is now live on the map. Share it with friends!',
+    viewOnMap: 'View on Map',
+    createAnother: 'Create Another',
+    backToProfile: 'Back to Profile',
   },
   pl: {
     map: 'Mapa', list: 'Lista', saved: 'Zapisane', profile: 'Profil',
@@ -1353,7 +1364,18 @@ const TRANSLATIONS = {
     joinConfirmText: 'Dodaj to do kalendarza, żeby nie zapomnieć.',
     done: 'Gotowe',
     installTip: 'Wskazówka: Dodaj Gather do ekranu głównego!',
-    comingSoon: 'wkrótce!',
+    comingSoon: 'Wkrótce',
+    voteToUnlock: 'Głosuj, aby odblokować!',
+    alreadyVoted: 'Już zagłosowałeś na to miasto!',
+    dontSeeCity: 'Nie widzisz swojego miasta?',
+    requestCityHint: 'Powiedz nam, gdzie chcesz Gather!',
+    send: 'Wyślij',
+    hosting: 'Organizujesz',
+    noHosting: 'Nie utworzyłeś jeszcze żadnych aktywności',
+    createConfirmText: 'Twoja aktywność jest już widoczna na mapie. Podziel się z przyjaciółmi!',
+    viewOnMap: 'Zobacz na mapie',
+    createAnother: 'Utwórz kolejną',
+    backToProfile: 'Wróć do profilu',
   }
 };
 
@@ -1866,18 +1888,32 @@ async function loadCategories() {
 
 async function loadActivities() {
   if (!sb || !state.currentCity) return;
-  const { data } = await sb
-    .from('activities')
-    .select('*, category:categories(*), host:profiles(display_name, avatar_url), participant_count:participants(count)')
-    .eq('city_id', state.currentCity.id)
-    .eq('status', 'active')
-    .order('starts_at');
-  state.activities = (data || []).map(a => ({
-    ...a,
-    category_id: a.category?.id || a.category_id,
-    host_name: a.host?.display_name || 'Anonymous',
-    participants: a.participant_count?.[0]?.count || 0
-  }));
+  try {
+    const { data, error } = await sb
+      .from('activities')
+      .select('*, category:categories(*), host:profiles(display_name, avatar_url), participant_count:participants(count)')
+      .eq('city_id', state.currentCity.id)
+      .eq('status', 'active')
+      .order('starts_at');
+    if (error) throw error;
+    const dbActivities = (data || []).map(a => ({
+      ...a,
+      category_id: a.category?.id || a.category_id,
+      host_name: a.host?.display_name || 'Anonymous',
+      participants: a.participant_count?.[0]?.count || 0
+    }));
+    // Merge: keep demo + user-created local activities, add DB activities
+    const localActivities = state.activities.filter(a =>
+      DEMO_ACTIVITIES.some(d => d.id === a.id) || String(a.id).startsWith('new-')
+    );
+    // Add DB activities that aren't already in local
+    const localIds = new Set(localActivities.map(a => a.id));
+    const merged = [...localActivities, ...dbActivities.filter(a => !localIds.has(a.id))];
+    state.activities = merged;
+  } catch (e) {
+    console.warn('loadActivities failed, keeping existing data:', e.message);
+    // Don't wipe state.activities — keep what we have
+  }
 }
 
 // ============================================
@@ -2351,6 +2387,32 @@ function showJoinConfirmation(activity) {
   renderActivities();
 }
 
+function showCreateConfirmation(title, location, startsAt) {
+  const date = new Date(startsAt);
+  const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
+  const dateStr = date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="panel-handle"></div>
+    <div style="padding:32px 20px;text-align:center;">
+      <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+      <h3 style="font-size:20px;font-weight:700;margin-bottom:8px;">${t('activityCreated') || 'Activity Created!'}</h3>
+      <p style="font-size:16px;font-weight:600;margin-bottom:4px;">${title}</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">📍 ${location}</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">📅 ${dateStr} · ${timeStr}</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">${t('createConfirmText') || 'Your activity is now live on the map. Share it with friends!'}</p>
+      <button class="btn btn-primary btn-full" onclick="closeAllPanels();renderActivities();" style="margin-bottom:10px;">
+        ${t('viewOnMap') || 'View on Map'}
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="closeAllPanels();openCreateActivity();">
+        ${t('createAnother') || 'Create Another'}
+      </button>
+    </div>
+  `;
+  openPanel('detail-panel');
+}
+
 function saveActivity(activityId) {
   const idx = state.savedIds.indexOf(activityId);
   const nowSaved = idx === -1;
@@ -2500,9 +2562,17 @@ async function submitActivity() {
       status: 'active'
     };
     state.activities.push(newActivity);
+
+    // Track as user's created activity
+    const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
+    if (!createdIds.includes(newActivity.id)) {
+      createdIds.push(newActivity.id);
+      localStorage.setItem('gather-created', JSON.stringify(createdIds));
+    }
+
     closeAllPanels();
     renderActivities();
-    toast(t('activityCreated') + ' 🎉');
+    showCreateConfirmation(title, locationName, startsAt);
     // Clear form
     document.getElementById('create-title').value = '';
     document.getElementById('create-desc').value = '';
@@ -2511,6 +2581,8 @@ async function submitActivity() {
     return;
   }
 
+  // Try Supabase insert, fall back to local
+  let savedToDB = false;
   try {
     const { error } = await sb.from('activities').insert({
       title,
@@ -2530,28 +2602,106 @@ async function submitActivity() {
     });
     if (error) throw error;
     await loadActivities();
-    closeAllPanels();
-    renderActivities();
-    toast(t('activityCreated') + ' 🎉');
+    savedToDB = true;
   } catch (err) {
-    if (err.message?.includes('Premium')) {
-      toast('⭐ ' + t('premiumRequired'));
-    } else {
-      toast('Error: ' + err.message);
-    }
+    console.warn('DB insert failed, saving locally:', err.message);
+    // Fall back to local creation (same as demo mode)
+    const newActivity = {
+      id: 'new-' + Date.now(),
+      title,
+      description: desc,
+      category_id: categoryId,
+      city_id: state.currentCity.id,
+      host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
+      host_id: state.user?.id,
+      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
+      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
+      location_name: locationName,
+      address,
+      starts_at: startsAt,
+      frequency,
+      lang,
+      participants: 1,
+      max_participants: maxP ? parseInt(maxP) : null,
+      source: 'user',
+      status: 'active'
+    };
+    state.activities.push(newActivity);
   }
+
+  // Track as user's created activity
+  const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
+  const newId = savedToDB
+    ? state.activities.find(a => a.title === title && a.host_id === state.user?.id)?.id
+    : state.activities[state.activities.length - 1]?.id;
+  if (newId && !createdIds.includes(newId)) {
+    createdIds.push(newId);
+    localStorage.setItem('gather-created', JSON.stringify(createdIds));
+  }
+
+  closeAllPanels();
+  renderActivities();
+
+  // Show success confirmation
+  showCreateConfirmation(title, locationName, startsAt);
+
+  // Clear form
+  document.getElementById('create-title').value = '';
+  document.getElementById('create-desc').value = '';
+  document.getElementById('create-location').value = '';
+  document.getElementById('create-address').value = '';
 }
 
 // ============================================
 // CITY PICKER
 // ============================================
+// Coming Soon cities — Phase 2 expansion targets
+const COMING_SOON_CITIES = [
+  { id: 'prague', name: 'Prague', country: 'Czech Republic', icon: '🏛️', desc: 'Expat hub · 1.3M population' },
+  { id: 'budapest', name: 'Budapest', country: 'Hungary', icon: '♨️', desc: 'Central European gem · 1.7M population' },
+  { id: 'berlin', name: 'Berlin', country: 'Germany', icon: '🐻', desc: 'Startup capital · 3.7M population' },
+  { id: 'vienna', name: 'Vienna', country: 'Austria', icon: '🎵', desc: 'Cultural heart of Europe · 1.9M population' },
+  { id: 'lisbon', name: 'Lisbon', country: 'Portugal', icon: '🌊', desc: 'Digital nomad favourite · 550K population' },
+  { id: 'amsterdam', name: 'Amsterdam', country: 'Netherlands', icon: '🚲', desc: 'International community · 900K population' },
+];
+
+function getComingSoonVotes(cityId) {
+  return (cityRequests[cityId] || {}).votes || 0;
+}
+
+function voteComingSoon(cityId, cityName) {
+  cityRequests[cityId] = cityRequests[cityId] || { name: cityName, votes: 0 };
+  // Check if user already voted (via localStorage flag)
+  const votedKey = 'gather-voted-' + cityId;
+  if (localStorage.getItem(votedKey)) {
+    toast(t('alreadyVoted') || 'You already voted for ' + cityName + '!');
+    return;
+  }
+  cityRequests[cityId].votes += 1;
+  localStorage.setItem('gather-city-requests', JSON.stringify(cityRequests));
+  localStorage.setItem(votedKey, '1');
+
+  // Push to Supabase if connected
+  if (sb) {
+    sb.from('city_requests').upsert({
+      city_name: cityName,
+      requested_by: state.user?.id || null,
+      requested_at: new Date().toISOString()
+    }, { onConflict: 'city_name,requested_by' }).then(() => {});
+  }
+
+  toast(`Voted for ${cityName}! 🗳️`);
+  openCityPicker(); // Re-render to update vote count
+}
+
 function openCityPicker() {
   const el = document.getElementById('city-list');
   document.getElementById('city-panel-title').textContent = t('chooseCity');
   const cityIcons = { 'Warsaw': '🏙️', 'Kraków': '🏰', 'Wrocław': '🌉', 'Poznań': '🏛️' };
   const cityDescs = { 'Warsaw': t('capitalCity'), 'Kraków': t('culturalCapital'), 'Wrocław': 'City of bridges · 640K population', 'Poznań': 'Business hub · 535K population' };
 
-  el.innerHTML = state.cities.map(c => `
+  // Active cities
+  let html = state.cities.map(c => `
     <div class="city-option ${c.id === state.currentCity.id ? 'active' : ''}" onclick="selectCity('${c.id}')">
       <div class="city-icon">${cityIcons[c.name] || '🌍'}</div>
       <div>
@@ -2559,21 +2709,49 @@ function openCityPicker() {
         <div class="city-desc">${cityDescs[c.name] || c.country}</div>
       </div>
     </div>
-  `).join('') + `
+  `).join('');
+
+  // Coming Soon section
+  html += `
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-      <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">🌍 Don't see your city?</p>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Tell us where you'd like Gather next. The most requested cities get added first!</p>
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;">🚀 ${t('comingSoon') || 'Coming Soon'} — ${t('voteToUnlock') || 'Vote to unlock!'}</p>
+      ${COMING_SOON_CITIES.map(c => {
+        const votes = getComingSoonVotes(c.id);
+        const voted = !!localStorage.getItem('gather-voted-' + c.id);
+        const pct = Math.min(votes * 5, 100); // Visual progress — 20 votes = 100%
+        return `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:28px;width:44px;text-align:center;">${c.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:15px;">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${c.desc}</div>
+            <div style="margin-top:6px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:2px;transition:width 0.3s;"></div>
+            </div>
+          </div>
+          <button onclick="voteComingSoon('${c.id}','${c.name}')" style="padding:6px 14px;border-radius:20px;border:${voted ? 'none' : '1.5px solid var(--primary)'};background:${voted ? 'var(--primary)' : 'white'};color:${voted ? 'white' : 'var(--primary)'};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
+            ${voted ? '✓ ' + votes : '👍 ' + (votes || 'Vote')}
+          </button>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+
+  // Custom city request section
+  html += `
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)">🌍 ${t('dontSeeCity') || "Don't see your city?"}</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${t('requestCityHint') || "Tell us where you'd like Gather next!"}</p>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="city-request-input" placeholder="e.g. Gdańsk, Łódź, Prague..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;">
-        <button class="btn btn-primary" onclick="submitCityRequest()" style="padding:10px 18px;white-space:nowrap;">Send</button>
+        <input type="text" id="city-request-input" placeholder="e.g. Gdańsk, Łódź, Rome..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;">
+        <button class="btn btn-primary" onclick="submitCityRequest()" style="padding:10px 18px;white-space:nowrap;">${t('send') || 'Send'}</button>
       </div>
       <div id="city-request-votes" style="margin-top:12px;"></div>
     </div>
   `;
 
-  // Show existing city vote counts
+  el.innerHTML = html;
   renderCityVotes();
-
   openPanel('city-panel');
 }
 
@@ -2700,7 +2878,7 @@ function openProfile() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           ${t('editProfile')}
         </div>
-        <div class="profile-menu-item" onclick="toast('${t('myActivities')} — ${t('comingSoon')}')">
+        <div class="profile-menu-item" onclick="closeAllPanels();showMyActivities();">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           ${t('myActivities')}
         </div>
@@ -2724,6 +2902,62 @@ function openProfile() {
       </div>
     `;
   }
+  openPanel('profile-panel');
+}
+
+function showMyActivities() {
+  const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
+  const createdActivities = state.activities.filter(a =>
+    createdIds.includes(a.id) || a.host_id === state.user?.id
+  );
+  const joinedActivities = state.activities.filter(a => state.joinedIds.includes(a.id));
+  const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
+
+  const renderActivityList = (items, emptyMsg) => {
+    if (!items.length) return `<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px;">${emptyMsg}</p>`;
+    return items.map(a => {
+      const cat = getCategoryInfo(a.category_id);
+      const date = new Date(a.starts_at);
+      const dateStr = date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+      const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+      return `
+        <div class="list-card" onclick='openDetailById("${a.id}")' style="margin-bottom:8px;">
+          <div class="list-card-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
+          <div class="list-card-info">
+            <h3>${a.title}</h3>
+            <div class="list-meta">
+              <span>📅 ${dateStr} ${timeStr}</span>
+              <span>📍 ${a.location_name || ''}</span>
+              <span>👥 ${a.participants || 0}${a.max_participants ? '/' + a.max_participants : ''}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  };
+
+  const el = document.getElementById('profile-content');
+  el.innerHTML = `
+    <div class="panel-header">
+      <h2>${t('myActivities')}</h2>
+      <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;">🎯 ${t('hosting') || 'Hosting'} (${createdActivities.length})</h3>
+        ${renderActivityList(createdActivities, t('noHosting') || 'You haven\'t created any activities yet')}
+      </div>
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;">✋ ${t('joined') || 'Joined'} (${joinedActivities.length})</h3>
+        ${renderActivityList(joinedActivities, t('noJoined') || 'You haven\'t joined any activities yet')}
+      </div>
+      <button class="btn btn-primary btn-full" onclick="closeAllPanels();openCreateActivity();" style="margin-top:8px;">
+        + ${t('hostActivity') || 'Host an Activity'}
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="closeAllPanels();openProfile();" style="margin-top:8px;">
+        ← ${t('backToProfile') || 'Back to Profile'}
+      </button>
+    </div>
+  `;
   openPanel('profile-panel');
 }
 
