@@ -1304,6 +1304,18 @@ const TRANSLATIONS = {
     deleteConfirmEmpty: 'Are you sure you want to delete "{{title}}"?',
     yesDelete: 'Yes, Delete',
     activityDeleted: 'Activity deleted',
+    displayName: 'Display Name',
+    yourName: 'Your name',
+    bio: 'Bio',
+    bioPlaceholder: 'Tell people a bit about yourself...',
+    homeCity: 'Home City',
+    homeCityPlaceholder: 'e.g. Kraków',
+    interests: 'Interests',
+    interestsPlaceholder: 'e.g. running, board games, photography',
+    saveChanges: 'Save Changes',
+    profileSaved: 'Profile saved!',
+    nameRequired: 'Display name is required',
+    viewEvent: 'View Your Event',
   },
   pl: {
     map: 'Mapa', list: 'Lista', saved: 'Zapisane', profile: 'Profil',
@@ -1400,6 +1412,18 @@ const TRANSLATIONS = {
     deleteConfirmEmpty: 'Czy na pewno chcesz usunąć "{{title}}"?',
     yesDelete: 'Tak, usuń',
     activityDeleted: 'Aktywność usunięta',
+    displayName: 'Nazwa wyświetlana',
+    yourName: 'Twoje imię',
+    bio: 'Bio',
+    bioPlaceholder: 'Powiedz coś o sobie...',
+    homeCity: 'Miasto',
+    homeCityPlaceholder: 'np. Kraków',
+    interests: 'Zainteresowania',
+    interestsPlaceholder: 'np. bieganie, gry planszowe, fotografia',
+    saveChanges: 'Zapisz zmiany',
+    profileSaved: 'Profil zapisany!',
+    nameRequired: 'Nazwa wyświetlana jest wymagana',
+    viewEvent: 'Zobacz swoje wydarzenie',
   }
 };
 
@@ -1893,9 +1917,27 @@ function updateUserButton() {
 // DATA LOADING (Supabase)
 // ============================================
 async function loadProfile() {
-  if (!sb || !state.user) return;
-  const { data } = await sb.from('profiles').select('*').eq('id', state.user.id).single();
-  state.profile = data;
+  // Always load local profile first
+  const localProfile = JSON.parse(localStorage.getItem('gather-profile') || 'null');
+  if (localProfile) state.profile = { ...state.profile, ...localProfile };
+
+  // Try loading from Supabase
+  if (sb && state.user) {
+    try {
+      const { data } = await sb.from('profiles').select('*').eq('id', state.user.id).single();
+      if (data) state.profile = { ...state.profile, ...data };
+    } catch (e) {
+      console.warn('Profile load from DB failed:', e.message);
+    }
+  }
+
+  // Ensure profile object exists
+  if (!state.profile) {
+    state.profile = {
+      display_name: state.user?.user_metadata?.display_name || state.user?.email?.split('@')[0] || 'User',
+      is_premium: false
+    };
+  }
 }
 
 async function loadCities() {
@@ -2893,8 +2935,18 @@ function openProfile() {
     `;
   } else {
     const name = state.profile?.display_name || state.user.email?.split('@')[0] || 'User';
+    const bio = state.profile?.bio || '';
     const initial = name[0].toUpperCase();
     const isPremium = state.profile?.is_premium;
+
+    // Host stats for profile
+    const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
+    const hostedCount = state.activities.filter(a => createdIds.includes(a.id) || a.host_id === state.user?.id).length;
+    const joinedCount = state.joinedIds.length;
+    let hostBadge = '👀', hostLevel = t('explorer') || 'Explorer';
+    if (hostedCount >= 10) { hostBadge = '🏆'; hostLevel = t('superHost') || 'Super Host'; }
+    else if (hostedCount >= 5) { hostBadge = '⭐'; hostLevel = t('activeHost') || 'Active Host'; }
+    else if (hostedCount >= 1) { hostBadge = '🌱'; hostLevel = t('newHost') || 'New Host'; }
 
     el.innerHTML = `
       <div class="panel-header">
@@ -2903,12 +2955,32 @@ function openProfile() {
       </div>
       <div class="panel-body">
         <div class="profile-header">
-          <div class="profile-avatar">${initial}</div>
+          <div class="profile-avatar" style="position:relative;">
+            ${initial}
+            <div onclick="openEditProfile()" style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+          </div>
           <div class="profile-name">${name} ${isPremium ? '<span class="premium-badge">⭐ Premium</span>' : ''}</div>
           <div class="profile-email">${state.user.email || ''}</div>
+          ${bio ? `<div style="font-size:13px;color:var(--text-muted);margin-top:4px;max-width:260px;text-align:center;">${bio}</div>` : ''}
+          <div style="display:flex;gap:16px;margin-top:12px;">
+            <div style="text-align:center;">
+              <div style="font-size:18px;font-weight:800;color:var(--primary);">${hostedCount}</div>
+              <div style="font-size:10px;color:var(--text-muted);font-weight:600;">${t('eventsHosted') || 'Hosted'}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:18px;font-weight:800;color:var(--primary);">${joinedCount}</div>
+              <div style="font-size:10px;color:var(--text-muted);font-weight:600;">${t('joined') || 'Joined'}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:18px;">${hostBadge}</div>
+              <div style="font-size:10px;color:var(--text-muted);font-weight:600;">${hostLevel}</div>
+            </div>
+          </div>
         </div>
-        <div class="profile-menu-item" onclick="toast('${t('editProfile')} — ${t('comingSoon')}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="profile-menu-item" onclick="openEditProfile()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           ${t('editProfile')}
         </div>
         <div class="profile-menu-item" onclick="closeAllPanels();switchView('mine');">
@@ -2936,6 +3008,95 @@ function openProfile() {
     `;
   }
   openPanel('profile-panel');
+}
+
+function openEditProfile() {
+  const name = state.profile?.display_name || state.user?.email?.split('@')[0] || '';
+  const bio = state.profile?.bio || '';
+  const city = state.profile?.city || '';
+  const interests = state.profile?.interests || '';
+
+  const el = document.getElementById('profile-content');
+  el.innerHTML = `
+    <div class="panel-header">
+      <h2>${t('editProfile')}</h2>
+      <button class="panel-close" onclick="closeAllPanels()">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div class="profile-avatar" style="margin:0 auto 8px;">${(name[0] || 'U').toUpperCase()}</div>
+        <p style="font-size:12px;color:var(--text-muted);">${state.user?.email || ''}</p>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-name" style="font-size:13px;font-weight:600;">${t('displayName') || 'Display Name'}</label>
+        <input type="text" id="edit-name" value="${name}" placeholder="${t('yourName') || 'Your name'}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;">
+      </div>
+
+      <div class="form-group">
+        <label for="edit-bio" style="font-size:13px;font-weight:600;">${t('bio') || 'Bio'}</label>
+        <textarea id="edit-bio" placeholder="${t('bioPlaceholder') || 'Tell people a bit about yourself...'}" rows="3" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;">${bio}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-city" style="font-size:13px;font-weight:600;">${t('homeCity') || 'Home City'}</label>
+        <input type="text" id="edit-city" value="${city}" placeholder="${t('homeCityPlaceholder') || 'e.g. Kraków'}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;">
+      </div>
+
+      <div class="form-group">
+        <label for="edit-interests" style="font-size:13px;font-weight:600;">${t('interests') || 'Interests'}</label>
+        <input type="text" id="edit-interests" value="${interests}" placeholder="${t('interestsPlaceholder') || 'e.g. running, board games, photography'}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;">
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="saveEditProfile()" style="margin-top:8px;">
+        ${t('saveChanges') || 'Save Changes'}
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="openProfile();" style="margin-top:8px;">
+        ${t('cancel') || 'Cancel'}
+      </button>
+    </div>
+  `;
+  openPanel('profile-panel');
+}
+
+function saveEditProfile() {
+  const name = document.getElementById('edit-name').value.trim();
+  const bio = document.getElementById('edit-bio').value.trim();
+  const city = document.getElementById('edit-city').value.trim();
+  const interests = document.getElementById('edit-interests').value.trim();
+
+  if (!name) {
+    toast(t('nameRequired') || 'Display name is required');
+    return;
+  }
+
+  // Update state
+  if (!state.profile) state.profile = {};
+  state.profile.display_name = name;
+  state.profile.bio = bio;
+  state.profile.city = city;
+  state.profile.interests = interests;
+
+  // Persist locally
+  localStorage.setItem('gather-profile', JSON.stringify(state.profile));
+
+  // Sync to Supabase if connected
+  if (!isDemo() && state.user?.id) {
+    sb.from('profiles').upsert({
+      id: state.user.id,
+      display_name: name,
+      bio,
+      city,
+      interests
+    }).then(({ error }) => {
+      if (error) console.warn('Profile sync failed:', error.message);
+    });
+  }
+
+  // Update user button in header
+  updateUserButton();
+  toast(t('profileSaved') || 'Profile saved!');
+  openProfile();
 }
 
 function showMyActivities() {
