@@ -3349,6 +3349,7 @@ function deleteActivity(activityId) {
     });
   }
 
+  closeAllPanels();
   renderActivities();
   toast(t('activityDeleted') || 'Activity deleted');
   if (state.currentView === 'mine') renderMyActivitiesView();
