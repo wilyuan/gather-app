@@ -1299,6 +1299,7 @@ const TRANSLATIONS = {
     cancel: 'Cancel',
     signInToJoin: 'Sign in to join this activity and get reminders.',
     signInToHost: 'Sign in to host your own activities and build a community.',
+    signUpToCreate: 'Sign up to share your favorite activities with the community!',
     signInToCalendar: 'Sign in to add events to your calendar.',
     joinConfirmTitle: "You're going!",
     joinConfirmText: 'Add this to your calendar so you don\'t forget.',
@@ -1412,6 +1413,7 @@ const TRANSLATIONS = {
     cancel: 'Anuluj',
     signInToJoin: 'Zaloguj się, aby dołączyć i otrzymywać przypomnienia.',
     signInToHost: 'Zaloguj się, aby organizować własne aktywności.',
+    signUpToCreate: 'Zarejestruj się, aby dzielić się swoimi ulubionymi aktywnościami ze społecznością!',
     signInToCalendar: 'Zaloguj się, aby dodawać wydarzenia do kalendarza.',
     joinConfirmTitle: 'Idziesz!',
     joinConfirmText: 'Dodaj to do kalendarza, żeby nie zapomnieć.',
@@ -2952,6 +2954,10 @@ function populateCreateForm() {
 }
 
 function openCreateActivity() {
+  if (!state.user) {
+    showAuth(t('signUpToCreate'));
+    return;
+  }
   openPanel('create-panel');
 }
 
