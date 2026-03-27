@@ -1685,7 +1685,7 @@ async function init() {
   state.cities = DEMO_CITIES;
   state.categories = DEMO_CATEGORIES;
   state.currentCity = DEMO_CITIES[1]; // Kraków — launch city
-  state.activities = DEMO_ACTIVITIES;
+  state.activities = [...DEMO_ACTIVITIES, ...loadLocalActivities()];
 
   // Try Supabase — even if it wasn't ready at script parse time
   tryInitSupabase();
@@ -1967,6 +1967,19 @@ async function loadCategories() {
   if (!sb) return;
   const { data } = await sb.from('categories').select('*').order('sort_order');
   state.categories = data || [];
+}
+
+// Persist/load user-created activities to/from localStorage
+function saveLocalActivities() {
+  const userActivities = state.activities.filter(a => String(a.id).startsWith('new-'));
+  localStorage.setItem('gather-user-activities', JSON.stringify(userActivities));
+}
+
+function loadLocalActivities() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('gather-user-activities') || '[]');
+    return saved;
+  } catch (e) { return []; }
 }
 
 async function loadActivities() {
@@ -2676,7 +2689,25 @@ async function submitActivity() {
 
   const startsAt = new Date(`${date}T${time}:00`).toISOString();
 
-  // Always create locally first (instant, reliable)
+  // Geocode the address to get accurate lat/lng
+  let lat = state.currentCity.lat;
+  let lng = state.currentCity.lng;
+  const geocodeQuery = address || locationName;
+  if (geocodeQuery) {
+    try {
+      const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeQuery + ', ' + (state.currentCity?.name || ''))}&limit=1`;
+      const geoRes = await fetch(geoUrl);
+      const geoData = await geoRes.json();
+      if (geoData && geoData.length > 0) {
+        lat = parseFloat(geoData[0].lat);
+        lng = parseFloat(geoData[0].lon);
+      }
+    } catch (e) {
+      console.warn('Geocoding failed, using city center:', e.message);
+    }
+  }
+
+  // Create the activity
   const newActivity = {
     id: 'new-' + Date.now(),
     title,
@@ -2686,8 +2717,8 @@ async function submitActivity() {
     host_name: state.profile?.display_name || 'Anonymous',
     host_avatar: state.profile?.avatar_url || null,
     host_id: state.user?.id,
-    lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
-    lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
+    lat,
+    lng,
     location_name: locationName,
     address,
     starts_at: startsAt,
@@ -2706,6 +2737,9 @@ async function submitActivity() {
     createdIds.push(newActivity.id);
     localStorage.setItem('gather-created', JSON.stringify(createdIds));
   }
+
+  // Persist user-created activities to localStorage so they survive refresh
+  saveLocalActivities();
 
   closeAllPanels();
   switchView('map');
@@ -3261,6 +3295,7 @@ function confirmDeleteActivity(activityId, participantCount) {
 function deleteActivity(activityId) {
   // Remove from activities
   state.activities = state.activities.filter(a => a.id !== activityId);
+  saveLocalActivities();
 
   // Remove from created IDs
   const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
