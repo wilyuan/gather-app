@@ -1526,8 +1526,8 @@ const DEMO_CITIES = [
   { id: 'krakow', name: 'Kraków', country: 'Poland', region: 'europe', lat: 50.0647, lng: 19.9450, zoom_level: 13 },
   { id: 'wroclaw', name: 'Wrocław', country: 'Poland', region: 'europe', lat: 51.1079, lng: 17.0385, zoom_level: 13 },
   { id: 'poznan', name: 'Poznań', country: 'Poland', region: 'europe', lat: 52.4064, lng: 16.9252, zoom_level: 13 },
-  { id: 'la', name: 'Los Angeles', country: 'USA', region: 'us', lat: 34.0522, lng: -118.2437, zoom_level: 12 },
-  { id: 'sav', name: 'Savannah', country: 'USA', region: 'us', lat: 32.0809, lng: -81.0912, zoom_level: 14 }
+  { id: 'la', name: 'Los Angeles', country: 'USA', region: 'us', lat: 34.0522, lng: -118.2437, zoom_level: 13 },
+  { id: 'sav', name: 'Savannah', country: 'USA', region: 'us', lat: 32.0809, lng: -81.0912, zoom_level: 13 }
 ];
 
 const DEMO_CATEGORIES = [
@@ -1896,9 +1896,6 @@ async function init() {
     // Try loading from Supabase — overlay on top of demo data
     try {
       const [citiesResult, catsResult] = await Promise.all([loadCities(), loadCategories()]);
-      if (state.cities.length && !state.cities.some(c => c.id === 'krakow')) {
-        state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
-      }
       await loadActivities();
       if (!state.activities.length) {
         state.activities = DEMO_ACTIVITIES;
@@ -2163,10 +2160,13 @@ async function loadCities() {
   if (!sb) return;
   const { data } = await sb.from('cities').select('*').eq('active', true).order('name');
   if (data && data.length) {
-    // Merge Supabase cities with demo cities (don't lose demo-only cities)
-    const sbIds = new Set(data.map(c => c.id));
-    const demosNotInSb = DEMO_CITIES.filter(c => !sbIds.has(c.id));
-    state.cities = [...data.map(c => ({ ...c, region: c.region || (c.country === 'USA' ? 'us' : 'europe') })), ...demosNotInSb];
+    // Merge Supabase cities with demo cities (dedup by name, prefer demo data for consistency)
+    const sbNames = new Set(data.map(c => c.name));
+    const demosNotInSb = DEMO_CITIES.filter(c => !sbNames.has(c.name));
+    // For cities in both, use demo version (has region, correct id for demo activities)
+    const demoNames = new Set(DEMO_CITIES.map(c => c.name));
+    const sbOnly = data.filter(c => !demoNames.has(c.name)).map(c => ({ ...c, region: c.region || (c.country === 'USA' ? 'us' : 'europe') }));
+    state.cities = [...DEMO_CITIES, ...sbOnly];
   }
 }
 
@@ -2206,14 +2206,14 @@ async function loadActivities() {
       host_avatar: a.host?.avatar_url || null,
       participants: a.participant_count?.[0]?.count || 0
     }));
-    // Merge: keep demo + user-created local activities, add DB activities
-    const localActivities = state.activities.filter(a =>
-      DEMO_ACTIVITIES.some(d => d.id === a.id) || String(a.id).startsWith('new-')
-    );
-    // Add DB activities that aren't already in local
-    const localIds = new Set(localActivities.map(a => a.id));
-    const merged = [...localActivities, ...dbActivities.filter(a => !localIds.has(a.id))];
-    state.activities = merged;
+    // Always keep ALL demo activities + user-created local activities
+    const demoIds = new Set(DEMO_ACTIVITIES.map(d => d.id));
+    const userCreated = loadLocalActivities();
+    const userIds = new Set(userCreated.map(a => a.id));
+    // Add DB activities that aren't duplicates of demo/local
+    const knownIds = new Set([...demoIds, ...userIds]);
+    const newFromDb = dbActivities.filter(a => !knownIds.has(a.id));
+    state.activities = [...DEMO_ACTIVITIES, ...userCreated, ...newFromDb];
   } catch (e) {
     console.warn('loadActivities failed, keeping existing data:', e.message);
     // Don't wipe state.activities — keep what we have
