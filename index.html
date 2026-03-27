@@ -137,6 +137,20 @@ html, body {
 }
 #header .user-btn:hover { transform: scale(1.1); }
 
+#header .lang-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#header .lang-btn:hover { border-color: var(--primary); }
+
 /* ============================================
    SEARCH BAR
    ============================================ */
@@ -866,7 +880,7 @@ html, body {
 <!-- ============================================
      MAIN APP
      ============================================ -->
-<div id="app" class="hidden">
+<div id="app">
 
   <!-- Header -->
   <div id="header">
@@ -875,6 +889,9 @@ html, body {
       <span id="current-city-name">Kraków</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
     </div>
+    <button class="lang-btn" onclick="setAppLanguage(state.appLang === 'en' ? 'pl' : 'en')" id="lang-btn" title="Switch language">
+      <span id="lang-btn-text">🇬🇧</span>
+    </button>
     <button class="user-btn" id="user-btn" onclick="openProfile()">?</button>
   </div>
 
@@ -1313,6 +1330,8 @@ function t(key) {
 function setAppLanguage(lang) {
   state.appLang = lang;
   localStorage.setItem('gather-lang', lang);
+  const langBtn = document.getElementById('lang-btn-text');
+  if (langBtn) langBtn.textContent = lang === 'en' ? '🇬🇧' : '🇵🇱';
   // Re-render everything with new language
   document.querySelector('#search-input').placeholder = t('searchPlaceholder');
   document.querySelectorAll('.nav-item span').forEach((s, i) => {
@@ -1406,6 +1425,24 @@ const DEMO_CATEGORIES = [
   { id: 'running', name: 'Running', icon: '🏃', color: '#10b981' },
   { id: 'volunteer', name: 'Volunteering', icon: '🤝', color: '#f59e0b' }
 ];
+
+const CATEGORY_PHOTOS = {
+  sports: 'https://images.unsplash.com/photo-1461896836934-bd45ba8b2d43?w=600&h=300&fit=crop',
+  boardgames: 'https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=600&h=300&fit=crop',
+  music: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&h=300&fit=crop',
+  art: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&h=300&fit=crop',
+  language: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&h=300&fit=crop',
+  outdoor: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&h=300&fit=crop',
+  tech: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&h=300&fit=crop',
+  food: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&h=300&fit=crop',
+  photo: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&h=300&fit=crop',
+  dancing: 'https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=600&h=300&fit=crop',
+  bookclub: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&h=300&fit=crop',
+  yoga: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=300&fit=crop',
+  tcg: 'https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=600&h=300&fit=crop',
+  running: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&h=300&fit=crop',
+  volunteer: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=600&h=300&fit=crop'
+};
 
 const DEMO_ACTIVITIES = [
   // ===== WARSAW (30 events: 20 recurring + 10 one-time) =====
@@ -1534,6 +1571,8 @@ function showApp() {
   populateCreateForm();
   initMap();
   renderActivities();
+  const langBtn = document.getElementById('lang-btn-text');
+  if (langBtn) langBtn.textContent = state.appLang === 'en' ? '🇬🇧' : '🇵🇱';
   // Apply saved language
   if (state.appLang !== 'en') {
     document.querySelector('#search-input').placeholder = t('searchPlaceholder');
@@ -1995,20 +2034,21 @@ function openDetail(activity) {
   const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
   const hostInitial = (activity.host_name || 'A')[0].toUpperCase();
   const isFull = activity.max_participants && activity.participants >= activity.max_participants;
+  const photoUrl = CATEGORY_PHOTOS[activity.category_id] || null;
 
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-hero" style="background:linear-gradient(135deg, ${cat.color}, ${cat.color}dd)">
-      <span style="font-size:64px">${cat.icon}</span>
+      ${photoUrl ? `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="font-size:64px;display:none">${cat.icon}</span>` : `<span style="font-size:64px">${cat.icon}</span>`}
       <div class="detail-lang-badge ${langClass}">${langLabel}</div>
     </div>
     <div class="detail-info">
       <h1>${activity.title}</h1>
       ${getTimingBadge(activity) ? `<div style="margin:8px 0">${getTimingBadge(activity)}</div>` : ''}
       <div class="detail-meta">
-        <div class="meta-item">📅 ${dateStr}</div>
+        <div class="meta-item" onclick="addToCalendar('${encodeURIComponent(activity.title)}', '${activity.starts_at}', '${encodeURIComponent(activity.location_name || '')}', '${encodeURIComponent(activity.description || '')}')" style="cursor:pointer;color:var(--primary)">📅 ${dateStr} <span style="font-size:11px">+ cal</span></div>
         <div class="meta-item">🕐 ${timeStr}</div>
         <div class="meta-item">📍 ${activity.location_name || 'TBA'}</div>
-        ${activity.address ? `<div class="meta-item">🗺️ ${activity.address}</div>` : ''}
+        ${activity.address ? `<div class="meta-item" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.address + ', ' + (state.currentCity?.name || ''))}','_blank')" style="cursor:pointer;color:var(--primary)">🗺️ ${activity.address} ↗</div>` : ''}
         <div class="meta-item">🔄 ${freqLabel[activity.frequency] || activity.frequency}</div>
         <div class="meta-item">💰 ${price}</div>
       </div>
@@ -2187,14 +2227,14 @@ function populateCreateForm() {
 }
 
 function openCreateActivity() {
-  if (!state.user) {
-    showAuth(t('signInToHost'));
-    return;
-  }
   openPanel('create-panel');
 }
 
 async function submitActivity() {
+  if (!state.user) {
+    showAuth(t('signInToHost'));
+    return;
+  }
   const title = document.getElementById('create-title').value.trim();
   const desc = document.getElementById('create-desc').value.trim();
   const categoryId = document.getElementById('create-category').value;
