@@ -1571,40 +1571,62 @@ const DEMO_ACTIVITIES = [
 // INITIALIZATION
 // ============================================
 async function init() {
-  if (state.demoMode) {
-    state.cities = DEMO_CITIES;
-    state.categories = DEMO_CATEGORIES;
-    state.currentCity = DEMO_CITIES[1]; // Kraków — launch city
-    state.activities = DEMO_ACTIVITIES;
-    showApp();
-  } else {
-    // Load public data first — app opens without sign-in
-    await loadCities();
-    await loadCategories();
-    state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
-    await loadActivities();
+  // Always use demo data as foundation
+  state.cities = DEMO_CITIES;
+  state.categories = DEMO_CATEGORIES;
+  state.currentCity = DEMO_CITIES[1]; // Kraków — launch city
+  state.activities = DEMO_ACTIVITIES;
 
-    // Fall back to demo data if database is empty (pre-scraper)
-    if (!state.activities.length) {
-      state.activities = DEMO_ACTIVITIES;
-    }
-    if (!state.categories.length) {
-      state.categories = DEMO_CATEGORIES;
-    }
-    if (!state.cities.length) {
-      state.cities = DEMO_CITIES;
-      state.currentCity = DEMO_CITIES[1];
+  if (!state.demoMode) {
+    // Try loading from Supabase — overlay on top of demo data
+    try {
+      const [citiesResult, catsResult] = await Promise.all([loadCities(), loadCategories()]);
+      if (state.cities.length && !state.cities.some(c => c.id === 'krakow')) {
+        // Got real cities from DB — use those
+        state.currentCity = state.cities.find(c => c.name === 'Kraków') || state.cities[0];
+      }
+      await loadActivities();
+      // If DB returned activities, use them; otherwise keep demo data
+      if (!state.activities.length) {
+        state.activities = DEMO_ACTIVITIES;
+      }
+    } catch (e) {
+      console.warn('Supabase load failed, using demo data:', e);
     }
 
-    // Check if user is already signed in
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      state.user = session.user;
-      await loadProfile();
+    // Check if user is already signed in (including OAuth redirect)
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        state.user = session.user;
+        await loadProfile();
+      }
+    } catch (e) {
+      console.warn('Auth check failed:', e);
     }
 
-    showApp();
+    // Listen for auth state changes (OAuth redirects, sign-in, sign-out)
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        state.user = session.user;
+        await loadProfile();
+        updateUserButton();
+        renderActivities();
+        // Clean up OAuth hash from URL
+        if (window.location.hash.includes('access_token')) {
+          history.replaceState(null, '', window.location.pathname);
+        }
+        toast(t('welcomeBack'));
+      } else if (event === 'SIGNED_OUT') {
+        state.user = null;
+        state.profile = null;
+        updateUserButton();
+        renderActivities();
+      }
+    });
   }
+
+  showApp();
 }
 
 function showAuth(message) {
