@@ -3155,6 +3155,16 @@ function saveEditProfile() {
     });
   }
 
+  // Update host_name on all user's created activities so public view reflects new name
+  const createdIds = new Set(JSON.parse(localStorage.getItem('gather-created') || '[]'));
+  state.activities.forEach(a => {
+    if (createdIds.has(a.id) || (state.user?.id && a.host_id === state.user.id)) {
+      a.host_name = name;
+      if (state.profile.avatar_url) a.host_avatar = state.profile.avatar_url;
+    }
+  });
+  saveLocalActivities();
+
   // Update user button in header
   updateUserButton();
   toast(t('profileSaved') || 'Profile saved!');
