@@ -1017,7 +1017,7 @@ html, body {
     </div>
     <p class="form-hint" id="frequency-hint">One-time events are always free. Recurring events require a Premium subscription.</p>
     <div style="height:12px"></div>
-    <button class="btn btn-primary btn-full" onclick="submitActivity()">Create Activity</button>
+    <button id="create-submit-btn" class="btn btn-primary btn-full" onclick="submitActivity()">Create Activity</button>
   </div>
 </div>
 
@@ -2509,7 +2509,9 @@ function openCreateActivity() {
   openPanel('create-panel');
 }
 
+let isSubmitting = false;
 async function submitActivity() {
+  if (isSubmitting) return; // Prevent double-tap
   if (!state.user) {
     showAuth(t('signInToHost'));
     return;
@@ -2530,6 +2532,11 @@ async function submitActivity() {
     return;
   }
 
+  // Show loading state
+  isSubmitting = true;
+  const submitBtn = document.getElementById('create-submit-btn');
+  if (submitBtn) { submitBtn.textContent = 'Creating...'; submitBtn.disabled = true; }
+
   // Freemium check
   if (frequency !== 'one_time' && state.profile && !state.profile.is_premium) {
     toast('⭐ ' + t('premiumRequired'));
@@ -2538,111 +2545,38 @@ async function submitActivity() {
 
   const startsAt = new Date(`${date}T${time}:00`).toISOString();
 
-  if (isDemo()) {
-    const cat = getCategoryInfo(categoryId);
-    // Place near city center with slight offset
-    const newActivity = {
-      id: 'new-' + Date.now(),
-      title,
-      description: desc,
-      category_id: categoryId,
-      city_id: state.currentCity.id,
-      host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
-      host_id: state.user?.id,
-      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
-      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
-      location_name: locationName,
-      address,
-      starts_at: startsAt,
-      frequency,
-      lang,
-      participants: 1,
-      max_participants: maxP ? parseInt(maxP) : null,
-      source: 'user',
-      status: 'active'
-    };
-    state.activities.push(newActivity);
-
-    // Track as user's created activity
-    const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
-    if (!createdIds.includes(newActivity.id)) {
-      createdIds.push(newActivity.id);
-      localStorage.setItem('gather-created', JSON.stringify(createdIds));
-    }
-
-    closeAllPanels();
-    renderActivities();
-    showCreateConfirmation(title, locationName, startsAt);
-    // Clear form
-    document.getElementById('create-title').value = '';
-    document.getElementById('create-desc').value = '';
-    document.getElementById('create-location').value = '';
-    document.getElementById('create-address').value = '';
-    return;
-  }
-
-  // Try Supabase insert, fall back to local
-  let savedToDB = false;
-  try {
-    const { error } = await sb.from('activities').insert({
-      title,
-      description: desc || null,
-      category_id: categoryId,
-      city_id: state.currentCity.id,
-      host_id: state.user.id,
-      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
-      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
-      location_name: locationName,
-      address: address || null,
-      starts_at: startsAt,
-      frequency,
-      lang,
-      max_participants: maxP ? parseInt(maxP) : null,
-      source: 'user'
-    });
-    if (error) throw error;
-    await loadActivities();
-    savedToDB = true;
-  } catch (err) {
-    console.warn('DB insert failed, saving locally:', err.message);
-    // Fall back to local creation (same as demo mode)
-    const newActivity = {
-      id: 'new-' + Date.now(),
-      title,
-      description: desc,
-      category_id: categoryId,
-      city_id: state.currentCity.id,
-      host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
-      host_id: state.user?.id,
-      lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
-      lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
-      location_name: locationName,
-      address,
-      starts_at: startsAt,
-      frequency,
-      lang,
-      participants: 1,
-      max_participants: maxP ? parseInt(maxP) : null,
-      source: 'user',
-      status: 'active'
-    };
-    state.activities.push(newActivity);
-  }
+  // Always create locally first (instant, reliable)
+  const newActivity = {
+    id: 'new-' + Date.now(),
+    title,
+    description: desc,
+    category_id: categoryId,
+    city_id: state.currentCity.id,
+    host_name: state.profile?.display_name || state.user?.email?.split('@')[0] || 'You',
+    host_id: state.user?.id,
+    lat: state.currentCity.lat + (Math.random() - 0.5) * 0.02,
+    lng: state.currentCity.lng + (Math.random() - 0.5) * 0.02,
+    location_name: locationName,
+    address,
+    starts_at: startsAt,
+    frequency,
+    lang,
+    participants: 1,
+    max_participants: maxP ? parseInt(maxP) : null,
+    source: 'user',
+    status: 'active'
+  };
+  state.activities.push(newActivity);
 
   // Track as user's created activity
   const createdIds = JSON.parse(localStorage.getItem('gather-created') || '[]');
-  const newId = savedToDB
-    ? state.activities.find(a => a.title === title && a.host_id === state.user?.id)?.id
-    : state.activities[state.activities.length - 1]?.id;
-  if (newId && !createdIds.includes(newId)) {
-    createdIds.push(newId);
+  if (!createdIds.includes(newActivity.id)) {
+    createdIds.push(newActivity.id);
     localStorage.setItem('gather-created', JSON.stringify(createdIds));
   }
 
   closeAllPanels();
   renderActivities();
-
-  // Show success confirmation
   showCreateConfirmation(title, locationName, startsAt);
 
   // Clear form
@@ -2650,6 +2584,32 @@ async function submitActivity() {
   document.getElementById('create-desc').value = '';
   document.getElementById('create-location').value = '';
   document.getElementById('create-address').value = '';
+
+  // Reset submit button
+  isSubmitting = false;
+  if (submitBtn) { submitBtn.textContent = t('createActivity') || 'Create Activity'; submitBtn.disabled = false; }
+
+  // Try syncing to Supabase in the background (fire-and-forget)
+  if (!isDemo()) {
+    sb.from('activities').insert({
+      title,
+      description: desc || null,
+      category_id: categoryId,
+      city_id: state.currentCity.id,
+      host_id: state.user.id,
+      lat: newActivity.lat,
+      lng: newActivity.lng,
+      location_name: locationName,
+      address: address || null,
+      starts_at: startsAt,
+      frequency,
+      lang,
+      max_participants: maxP ? parseInt(maxP) : null,
+      source: 'user'
+    }).then(({ error }) => {
+      if (error) console.warn('Background DB sync failed:', error.message);
+    });
+  }
 }
 
 // ============================================
