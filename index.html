@@ -2168,7 +2168,7 @@ function renderMarkers(activities) {
     const langLabel = activity.lang === 'en' ? 'EN' : activity.lang === 'pl' ? 'PL' : 'EN/PL';
     const timing = getActivityTiming(activity);
     const timingClass = timing === 'now' ? 'happening-now' : timing === 'soon' ? 'happening-soon' : timing === 'upcoming' ? 'happening-upcoming' : '';
-    const isMyEvent = createdIds.has(activity.id) || activity.host_id === state.user?.id;
+    const isMyEvent = createdIds.has(activity.id) || (state.user?.id && activity.host_id === state.user.id);
     const icon = L.divIcon({
       className: '',
       html: `<div class="activity-marker ${activity.is_business ? 'business' : ''} ${timingClass} ${isMyEvent ? 'my-event' : ''}" style="background:${cat.color}">
@@ -2431,7 +2431,7 @@ function openDetail(activity) {
   const price = activity.price_cents ? `${(activity.price_cents/100).toFixed(0)} PLN` : t('free');
   const freqLabel = { one_time: t('oneTime'), weekly: t('everyWeek'), biweekly: t('every2Weeks'), monthly: t('monthly'), daily: t('daily') };
   // For user's own events, always show their current profile name/avatar
-  const isOwnEvent = activity.host_id === state.user?.id;
+  const isOwnEvent = state.user?.id && activity.host_id === state.user.id;
   const hostDisplayName = isOwnEvent ? (state.profile?.display_name || activity.host_name || 'Anonymous') : (activity.host_name || 'Anonymous');
   const hostInitial = (hostDisplayName)[0].toUpperCase();
   const hostAvatarUrl = isOwnEvent ? state.profile?.avatar_url : activity.host_avatar;
