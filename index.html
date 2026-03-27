@@ -2455,7 +2455,7 @@ function showJoinConfirmation(activity) {
   renderActivities();
 }
 
-function showCreateConfirmation(title, location, startsAt) {
+function showCreateConfirmation(activityId, title, location, startsAt) {
   const date = new Date(startsAt);
   const locale = state.appLang === 'pl' ? 'pl-PL' : 'en-GB';
   const dateStr = date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -2470,8 +2470,8 @@ function showCreateConfirmation(title, location, startsAt) {
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">📍 ${location}</p>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">📅 ${dateStr} · ${timeStr}</p>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">${t('createConfirmText') || 'Your activity is now live on the map. Share it with friends!'}</p>
-      <button class="btn btn-primary btn-full" onclick="closeAllPanels();renderActivities();" style="margin-bottom:10px;">
-        ${t('viewOnMap') || 'View on Map'}
+      <button class="btn btn-primary btn-full" onclick="closeAllPanels();openDetailById('${activityId}');" style="margin-bottom:10px;">
+        ${t('viewEvent') || 'View Your Event'}
       </button>
       <button class="btn btn-secondary btn-full" onclick="closeAllPanels();openCreateActivity();">
         ${t('createAnother') || 'Create Another'}
@@ -2644,8 +2644,13 @@ async function submitActivity() {
   }
 
   closeAllPanels();
+  switchView('map');
   renderActivities();
-  showCreateConfirmation(title, locationName, startsAt);
+
+  // Fly map to the new activity pin
+  state.map.flyTo([newActivity.lat, newActivity.lng], 16, { duration: 1.2 });
+
+  showCreateConfirmation(newActivity.id, title, locationName, startsAt);
 
   // Clear form
   document.getElementById('create-title').value = '';
