@@ -2195,8 +2195,18 @@ async function loadCities() {
 
 async function loadCategories() {
   if (!sb) return;
-  const { data } = await sb.from('categories').select('*').order('sort_order');
-  state.categories = data || [];
+  try {
+    const { data } = await sb.from('categories').select('*').order('sort_order');
+    if (data && data.length) {
+      // Prefer demo categories (correct IDs for matching demo activities)
+      const demoIds = new Set(DEMO_CATEGORIES.map(c => c.id));
+      const demoNames = new Set(DEMO_CATEGORIES.map(c => c.name));
+      const newFromDb = data.filter(c => !demoIds.has(c.id) && !demoNames.has(c.name));
+      state.categories = [...DEMO_CATEGORIES, ...newFromDb];
+    }
+  } catch (e) {
+    console.warn('loadCategories failed, keeping demo data:', e.message);
+  }
 }
 
 // Persist/load user-created activities to/from localStorage
