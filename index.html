@@ -3258,12 +3258,23 @@ function submitCityRequest() {
   // Normalize
   const key = cityName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
 
-  // Increment local vote count
+  // Save locally
   cityRequests[key] = cityRequests[key] || { name: cityName, votes: 0 };
   cityRequests[key].votes += 1;
   localStorage.setItem('gather-city-requests', JSON.stringify(cityRequests));
 
-  // Push to Supabase if connected (fire-and-forget)
+  // Also save to feedback log so it's visible alongside other feedback
+  const feedbackList = JSON.parse(localStorage.getItem('gather-feedback') || '[]');
+  feedbackList.push({
+    text: `🏙️ City request: ${cityName}`,
+    user: state.user?.email || 'anonymous',
+    name: state.profile?.display_name || '',
+    timestamp: new Date().toISOString(),
+    type: 'city_request'
+  });
+  localStorage.setItem('gather-feedback', JSON.stringify(feedbackList));
+
+  // Push to Supabase (fire-and-forget)
   if (sb) {
     sb.from('city_requests').upsert({
       city_name: cityName,
